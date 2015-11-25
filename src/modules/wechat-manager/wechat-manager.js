@@ -1,5 +1,5 @@
 var cluster = require('cluster');
-var vc = require('vc');
+
 /**
  * create a wechat agent manager that maintain a master process to control
  * the workers
@@ -12,17 +12,33 @@ function WechatManager(manager){
     this.status = manager.status || 'running';
     this.workers = {};
     this.payloadNum = manager.payloadNum;
+    this.vcr = manager.vcr;
 }
 
 var proto = WechatManager.prototype;
 
 proto.init = function(){
+    var self = this;
     //compose vc channels
     Object.keys(cluster.workers).forEach(function(id){
-        cluster.workers[id].removeAllListeners('message').on('message', function(msg){
-           // vc.publish('', {})
+        cluster.workers[id].removeAllListeners('message').on('message', function(cmd){
+            var method = getMethodInChannels(cmd.method);
+            if(method){
+                self.vcr[method].apply(null, [cmd.args]);
+            } else {
+                console.info('no such method, method\'s name is ' + cmd.method);
+            }
         });
-    })
+    });
+    function getMethodInChannels(method){
+        var result = null;
+        for(var prop in self.vcr.channels){
+            if(self.vcr.channels[prop] === method){
+                result = prop;
+            }
+        }
+        return result;
+    }
 };
 
 proto.start = function(id, callback){
@@ -96,9 +112,10 @@ proto.heartbeat = function(){
     }
 };
 
-module.exports = function(json){
+module.exports = function(json, vcr){
     var manager = {
-        payloadNum: json.payloadNum
+        payloadNum: json.payloadNum,
+        vcr: vcr
     };
     return new WechatManager(manager);
 };

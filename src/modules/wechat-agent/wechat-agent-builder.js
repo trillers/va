@@ -19,8 +19,9 @@ process.on('message', function(cmd) {
     cmdMap[cmd.method].apply(null, [cmd.args])
 });
 function heartbeatRequestHandler(){
+    console.error('ok')
     process.send({
-        method: 'heartbeat:response',
+        method: 'heartbeat-response',
         args: {
             status: worker.getStatus(),
             pid: worker.pid,
