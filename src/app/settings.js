@@ -4,7 +4,7 @@ var reconnectTime = 12*60*60*1000;
 
 var fsUrl = settings.api.url + '/file/upload';
 
-var wxIndexUrl = 'http://wx.qq.com';
+var wxIndexUrl = 'https://wx.qq.com';
 
 var pollingGap = 1000;
 

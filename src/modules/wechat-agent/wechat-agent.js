@@ -3,12 +3,16 @@ var util = require('util');
 var request = require('request');
 var settings = require('../../app/settings');
 var createDriver = require('../webdriver/webdriverFactory');
+var fsServer = settings.fsUrl;
 var TaskQueue = require('l-mq');
+var waitFor = require('../util').waitFor;
+var getCount = require('../util').getCount;
 
 function WechatAgent(worker){
     EventEmitter.call(this);
     this.id = worker.id;
     this.pid = worker.pid;
+    //enum []
     this.status = worker.status || 'start';
     this.sendTo = null;
     this.driver = createDriver();
@@ -28,22 +32,15 @@ proto.getStatus = function(){
     return this.status;
 };
 
-proto.start = function(){
+proto.start = function(callback){
     var self = this;
     console.log('[transaction]: begin to start botid=' + self.id);
-    self._login(function(err, data){
-        console.log('login ok');
-        if(err) {
-            self.stop().then(function(){
-                self.start();
-            })
-        }else{
-            self._polling();
-        }
+    self._login(function(err){
+        console.log(err);
     });
 };
 
-proto._login = function(){
+proto._login = function(callback){
     var self = this;
     console.log("[flow]: Begin to login");
     self.driver.get(settings.wxIndexUrl)
@@ -56,7 +53,6 @@ proto._login = function(){
                             return self.start();
                         });
                 }
-                return;
             });
             self.callCsToLogin = setInterval(function(){
                 needLogin(self, function(err, media_id){
@@ -67,7 +63,6 @@ proto._login = function(){
                                 return self.start();
                             });
                     }
-                    return;
                 });
             }, settings.callCsToLoginGap);
             self.waitForLogin = setInterval(function(){
@@ -102,9 +97,35 @@ proto._login = function(){
 
 proto.restart = function(){};
 
-proto.stop = function(){};
+proto.stop = function(){
+    var self = this;
+    return self.driver.close()
+        .then(function(){
+            return self.init(self);
+        })
+        .thenCatch(function(e){
+            console.error('[system]: Failed to stop bot');
+            console.error(e);
+            return self.init(self);
+        })
+};
 
-proto.init = function(){};
+proto.init = function(bot){
+    bot.sendTo = null;
+    bot.driver = createDriver();
+    bot.taskQueue = new TaskQueue(1);
+    bot.loggedIn = false;
+    if(bot.callCsToLogin){
+        bot.callCsToLogin = null;
+        clearInterval(bot.callCsToLogin);
+    }
+    if(bot.waitForLogin){
+        clearInterval(bot.waitForLogin);
+        bot.waitForLogin = null;
+    }
+    bot.emit('abort', {err: null, data: {botid: bot.id}});
+    return bot.driver.sleep(3000);
+};
 
 proto.sendText = function(){};
 
@@ -132,15 +153,20 @@ proto.onAbort = function(){};
 
 proto.onReceive = function(){};
 
-proto.onNeedLogin = function(){};
+proto.onNeedLogin = function(){
+    var self = this;
+    this.removeAllListeners('needLogin').on('needLogin', function(data){
+        var err = data.err;
+        var data = data.data;
+        handler.call(self, err, data);
+    });
+};
 
 proto.onAddContact = function(){};
 
 proto.onDisconnect = function(){};
 
 proto._polling = function(){};
-
-proto._login = function(){};
 
 proto._findOne = function(){};
 

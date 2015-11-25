@@ -1,2 +1,1 @@
-require('./src/app/worker-factory');
-require('./src/app/app')();
+require('./src/app/app');

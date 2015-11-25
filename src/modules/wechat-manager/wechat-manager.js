@@ -1,15 +1,29 @@
-var workerFactory = require('../../app/worker-factory');
+var cluster = require('cluster');
+var vc = require('vc');
 /**
  * create a wechat agent manager that maintain a master process to control
  * the workers
  * @constructor
+ * @param manager
+ * status [enum: 'running', 'stopped', 'abnormalStopped']
+ * payloadNum [num]
  */
 function WechatManager(manager){
-    this.workers = [];
+    this.status = manager.status || 'running';
+    this.workers = {};
     this.payloadNum = manager.payloadNum;
 }
 
 var proto = WechatManager.prototype;
+
+proto.init = function(){
+    //compose vc channels
+    Object.keys(cluster.workers).forEach(function(id){
+        cluster.workers[id].removeAllListeners('message').on('message', function(msg){
+           // vc.publish('', {})
+        });
+    })
+};
 
 proto.start = function(id, callback){
     if(this.getWorkerById(id)){
@@ -18,9 +32,12 @@ proto.start = function(id, callback){
     if(this.getAllWorkers().length >= this.payloadNum){
         return callback(new Error('the manager\'s payload num has reached limit'));
     }
-    var worker = workerFactory.getProcess();
+    var worker = cluster.fork();
+    this.init();
+    this.workers[worker.process.pid] = worker;
     var json = {
-        pid: worker.process.pid
+        pid: worker.process.pid,
+        id: id
     };
     worker.on('online', function(){
         var cmd = {
@@ -68,6 +85,15 @@ proto.isAlive = function(id){
 
 proto.getAllWorkers = function(){
     return this.workers;
+};
+
+proto.heartbeat = function(){
+    var self = this;
+    for(var pid in self.workers){
+        self.workers[pid].send({
+            method: 'heartbeat:request'
+        });
+    }
 };
 
 module.exports = function(json){
