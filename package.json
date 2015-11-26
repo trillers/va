@@ -9,7 +9,7 @@
   "repository": "https://github.com/trillers/va",
   "license": "",
   "dependencies": {
-    "vcr": "*",
+    "vcr": "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/vcr.git",
     "athena-settings": "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/athena-settings.git",
     "bluebird": "^2.9.34",
     "co": "*",

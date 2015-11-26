@@ -5,27 +5,28 @@ var net = require('net');
 var agentFactory = require('./wechat-agent');
 var server = net.createServer(function(socket) {});
 var worker = null;
+var exChannels = require('vcr').channels;
 // connections never end
 server.listen(8000);
 
-var cmdMap = {
-    'start': startHandler,
-    'stop': stopHandler,
-    'heartbeat:request': heartbeatRequestHandler
-};
+var ipcChannel = {};
+
+ipcChannel[exChannels.agentHeartBeatResponse] = heartbeatRequestHandler;
+ipcChannel['start'] = startHandler;
+ipcChannel['start'] = startHandler;
 
 process.on('message', function(cmd) {
-    console.log(cmdMap[cmd.method])
-    cmdMap[cmd.method].apply(null, [cmd.args])
+    ipcChannel[cmd.method].apply(null, [cmd.args])
 });
+
 function heartbeatRequestHandler(){
-    console.error('ok')
     process.send({
-        method: 'heartbeat-response',
+        method: exChannels.agentHeartBeatResponse,
         args: {
             status: worker.getStatus(),
             pid: worker.pid,
-            agentId: worker.id
+            agentId: worker.id,
+            managerId: worker.managerId
         }
     })
 }

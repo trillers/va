@@ -2,7 +2,7 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var request = require('request');
 var settings = require('../../app/settings');
-var createDriver = require('../webdriver/webdriverFactory');
+//var createDriver = require('../webdriver/webdriverFactory');
 var fsServer = settings.fsUrl;
 var TaskQueue = require('l-mq');
 var waitFor = require('../util').waitFor;
@@ -11,11 +11,12 @@ var getCount = require('../util').getCount;
 function WechatAgent(worker){
     EventEmitter.call(this);
     this.id = worker.id;
+    this.managerId = worker.managerId;
     this.pid = worker.pid;
     //enum []
     this.status = worker.status || 'start';
     this.sendTo = null;
-    this.driver = createDriver();
+    //this.driver = createDriver();
     this.taskQueue = new TaskQueue(1);
     this.loggedIn = false;
     this.callCsToLogin = null;
@@ -33,11 +34,12 @@ proto.getStatus = function(){
 };
 
 proto.start = function(callback){
-    var self = this;
-    console.log('[transaction]: begin to start botid=' + self.id);
-    self._login(function(err){
-        console.log(err);
-    });
+    console.log('started')
+    //var self = this;
+    //console.log('[transaction]: begin to start botid=' + self.id);
+    //self._login(function(err){
+    //    console.log(err);
+    //});
 };
 
 proto._login = function(callback){
