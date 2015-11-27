@@ -28,13 +28,9 @@ proto.init = function(){
         cluster.workers[id].removeAllListeners('message').on('message', function(cmd){
             var method = getMethodInChannels(cmd.method);
             //TODO internal channels
-            var channels = {};
-            //external channels - vcr
-            if(method){
-                self.vcr[method].apply(self.vcr, [cmd.args]);
-            }
+            var invChannels = {};
             //message in cluster
-            else if(method in channels){
+            if(method in invChannels){
                 //TODO
             }
             else{
@@ -42,15 +38,6 @@ proto.init = function(){
             }
         });
     });
-    function getMethodInChannels(method){
-        var result = null;
-        for(var prop in self.vcr.channels){
-            if(self.vcr.channels[prop] === method){
-                result = prop;
-            }
-        }
-        return result;
-    }
 };
 
 /**
@@ -121,15 +108,6 @@ proto.isAlive = function(id){
 
 proto.getAllWorkers = function(){
     return this.workers;
-};
-
-proto.heartbeat = function(){
-    var self = this;
-    for(var pid in self.workers){
-        self.workers[pid].send({
-            method: self.vcr.channels.agentHeartBeatResponse
-        });
-    }
 };
 
 module.exports = function(json){
