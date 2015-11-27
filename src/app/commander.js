@@ -10,7 +10,7 @@ var driver = new webdriver.Builder()
     .build();
 driver.get('http://www.baidu.com');
 driver.findElement({css: '#ee'}).thenCatch(function(){
-    
+
 });
 driver.sleep(30000000);
 driver.quit();

@@ -23,6 +23,8 @@ wechatManager = wechatManagerFactory({
     vcr: vcrOrigin
 });
 
+wechatManager.spawnWorker('test');
+
 //do some test
 setTimeout(function(){
     //vb
@@ -57,6 +59,4 @@ setTimeout(function(){
     vcrOrigin.agentHeartBeatRequest('test');
     vcrOrigin.heartBeatRequest('test');
 }, 3000);
-
-wechatManager.spawnWorker('test');
 
