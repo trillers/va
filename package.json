@@ -3,26 +3,29 @@
   "version": "0.0.1-SNAPSHOT",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node --harmony index.js",
     "test": "./node_modules/mocha/bin/mocha index.js"
   },
   "repository": "https://github.com/trillers/va",
   "license": "",
   "dependencies": {
-    "vcr": "*",
-    "athena-settings": "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/athena-settings.git",
-    "bluebird": "^2.9.34",
-    "co": "*",
+    "base-settings":  "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/base-settings.git",
+    "vc":             "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/vc.git",
+    "selenium-webdriver": "2.46.1",
+    "bluebird": "2.9.34",
+    "co": "4.6.0",
     "l-mq": "*",
-    "lodash": "~3.8.0",
-    "log4js": "~0.6.22",
-    "redis": "~0.12.1",
-    "redis-sentinel": "^0.3.3",
-    "request": "^2.51.0",
-    "selenium-webdriver": "^2.46.1",
-    "underscore": "*"
+    "log4js": "0.6.26",
+    "amqplib": "0.4.0",
+    "redis": "0.12.1",
+    "request": "2.61.0",
+    "underscore": "1.8.3"
   },
   "devDependencies": {
-    "mocha": "^2.1.0"
+    "mocha": "2.1.0",
+    "chai": "3.3.0"
+  },
+  "engines": {
+    "node": ">= 0.11.9"
   }
 }
