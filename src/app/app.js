@@ -3,18 +3,25 @@ var channels = require('vcr').channels;
 var pubClient = require('../../src/app/redis-client')('pub');
 var subClient = require('../../src/app/redis-client')('sub');
 var vcrOrigin = VCR(pubClient, subClient);
+vcrOrigin.channels = channels;
 var cluster = require('cluster');
 var path = require('path');
 var numCPUs = require('os').cpus.length;
 var wechatManagerFactory = require('../modules/wechat-manager/wechat-manager');
-
-vcrOrigin.channels = channels;
+var net = require('net');
 
 //init cluster
 cluster.setupMaster({
     exec: path.join(__dirname, '../modules/wechat-agent/wechat-agent-builder.js'),
     args: ['--harmony']
 });
+
+//handle uncaughtException to protect process
+process.on('uncaughtException', function(err){ console.error(err); });
+
+//create a master process, connection never end
+var server = net.createServer(function(socket) {});
+server.listen(3000);
 
 //build wechat manager
 wechatManager = wechatManagerFactory({
