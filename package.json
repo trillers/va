@@ -14,6 +14,7 @@
     "selenium-webdriver": "2.46.1",
     "bluebird": "2.9.34",
     "co": "4.6.0",
+    "amqplib": "0.4.0",
     "log4js": "0.6.26",
     "request": "2.61.0",
     "underscore": "1.8.3"
