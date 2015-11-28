@@ -13,7 +13,6 @@ function WechatManager(manager){
     this.status = manager.status || 'running';
     this.workers = {};
     this.payloadNum = manager.payloadNum;
-    this.vcr = manager.vcr;
 }
 
 var proto = WechatManager.prototype;
@@ -23,14 +22,12 @@ var proto = WechatManager.prototype;
  */
 proto.init = function(){
     var self = this;
-    //compose vc channels
     Object.keys(cluster.workers).forEach(function(id){
         cluster.workers[id].removeAllListeners('message').on('message', function(cmd){
-            var method = getMethodInChannels(cmd.method);
             //TODO internal channels
             var invChannels = {};
             //message in cluster
-            if(method in invChannels){
+            if(cmd.method in invChannels){
                 //TODO
             }
             else{
@@ -113,7 +110,6 @@ proto.getAllWorkers = function(){
 module.exports = function(json){
     var manager = {
         payloadNum: json.payloadNum,
-        vcr: json.vcr,
         id: json.id
     };
     return new WechatManager(manager);

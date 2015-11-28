@@ -3,7 +3,7 @@ var agentFactory = require('./wechat-agent');
 var server = net.createServer(function(socket) {});
 var worker = null;
 var settings = require('./wechat-agent-settings');
-var brokerAgent = require('../wechat-communicator').brokerAgent;
+var brokerAgent = require('../wechat-broker').brokerAgent;
 
 //connections never end
 server.listen(8000);
