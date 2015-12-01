@@ -1,5 +1,5 @@
 var cluster = require('cluster');
-
+var vc = require('vc');
 /**
  * create a wechat agent manager that maintain a master process to control
  * the workers
@@ -13,6 +13,7 @@ function WechatManager(manager){
     this.status = manager.status || 'running';
     this.workers = {};
     this.payloadNum = manager.payloadNum;
+    this.init();
 }
 
 var proto = WechatManager.prototype;
@@ -22,18 +23,9 @@ var proto = WechatManager.prototype;
  */
 proto.init = function(){
     var self = this;
+    //bind workers event listener
     Object.keys(cluster.workers).forEach(function(id){
-        cluster.workers[id].removeAllListeners('message').on('message', function(cmd){
-            //TODO internal channels
-            var invChannels = {};
-            //message in cluster
-            if(cmd.method in invChannels){
-                //TODO
-            }
-            else{
-                console.warn('no such method, method\'s name is ' + cmd.method);
-            }
-        });
+        cluster.workers[id].removeAllListeners('message').on('message', self._cmdHandler.bind(self));
     });
 };
 
@@ -43,8 +35,9 @@ proto.init = function(){
  * @param callback
  * @returns {*}
  */
-proto.spawnWorker = function(id, callback){
+proto.spawnWorker = function(json, callback){
     var self = this;
+    var id = json.id;
     if(this.getWorkerById(id)){
         return callback(new Error('the worker is already started'));
     }
@@ -52,9 +45,9 @@ proto.spawnWorker = function(id, callback){
         return callback(new Error('the manager\'s payload num has reached limit'));
     }
     var worker = cluster.fork();
-    this.init();
+    worker.on('message', self._cmdHandler.bind(self));
     this.workers[worker.process.pid] = worker;
-    var json = {
+    var entity = {
         pid: worker.process.pid,
         id: id,
         managerId: self.id
@@ -62,7 +55,16 @@ proto.spawnWorker = function(id, callback){
     worker.on('online', function(){
         var cmd = {
             method: 'start',
-            args: json
+            args: {
+                workerJson: entity,
+                options:{
+                    intention: json.intention,
+                    mode: json.mode,
+                    nickname:json.Nickname,
+                    sex: json.Sex,
+                    region: json.Region
+                }
+            }
         };
         worker.send(cmd);
     });
@@ -106,6 +108,18 @@ proto.isAlive = function(id){
 proto.getAllWorkers = function(){
     return this.workers;
 };
+
+proto._cmdHandler = function(cmd){
+    //TODO internal channels
+    var invChannels = {};
+    //message in cluster
+    if(cmd.method in invChannels){
+        //TODO
+    }
+    else{
+        console.warn('no such method, method\'s name is ' + cmd.method);
+    }
+}
 
 module.exports = function(json){
     var manager = {

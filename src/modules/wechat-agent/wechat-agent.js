@@ -33,13 +33,30 @@ proto.getStatus = function(){
     return this.status;
 };
 
-proto.start = function(callback){
-    console.log('started')
-    //var self = this;
-    //console.log('[transaction]: begin to start botid=' + self.id);
-    //self._login(function(err){
-    //    console.log(err);
-    //});
+proto.start = function(options, callback){
+    console.info('[system]: an agent is startup [id]=' + this.id);
+    var self = this;
+    console.log('[transaction]: begin to start botid=' + self.id);
+    self._login(function(err){
+        if(err){
+            console.log(err);
+            return callback(err);
+        }
+        if(options.intention === 'register'){
+            //TODO register
+            //TODO check
+            //pass than emit register event
+            //failed than exit
+        }
+        //mode trusted | untrusted
+        if(options.mode === 'untrusted'){
+            //TODO check
+            //pass than polling
+            //failed than exit
+        } else {
+            //polling
+        }
+    });
 };
 
 proto._login = function(callback){

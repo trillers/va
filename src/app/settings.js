@@ -18,6 +18,10 @@ var waitForLoginGap = 2000;
 
 var RESET_TITLE = "File Transfer";
 
+var services = {
+    RABBITMQ: 'RABBITMQ'
+};
+
 module.exports = {
     reconnectTime: reconnectTime,
     fsUrl: fsUrl,
@@ -27,5 +31,6 @@ module.exports = {
     pollingLoginOrNotGap: pollingLoginOrNotGap,
     callCsToLoginGap: callCsToLoginGap,
     waitForLoginGap: waitForLoginGap,
-    RESET_TITLE: RESET_TITLE
+    RESET_TITLE: RESET_TITLE,
+    services: services
 };
