@@ -41,7 +41,10 @@ function callback(){
     getBroker().then(function(broker){
         //continue to heartbeat
         setInterval(function(){
-            broker.brokerManager.heartbeat({bid: wechatManager.id, status: wechatManager.status});
+            broker.brokerManager.heartbeat({
+                CreateTime: (new Date()).getTime(),
+                NodeId: wechatManager.id
+            });
         }, managerSettings.heartbeatGap);
 
         /**
@@ -71,16 +74,17 @@ function callback(){
          *      ActualAgentSum: 实际
          *  }
          */
-        broker.brokerManager.onStatusRequest(function(data){
+        broker.brokerManager.onStatusRequest(function(err, data){
             if(data.NodeId === wechatManager.id){
+                console.log('[system]: receive a status request event');
                 broker.brokerManager.statusResponse({
                     CreateTime: new Date(),
                     NodeId: wechatManager.id,
                     RAM: require('../modules/wechat-manager/helper/getRAMUsage')(),
                     CPU: 0,
                     IP: require('../modules/wechat-manager/helper/getIPInfo')(),
-                    ExceptedAgentSum: require('os').cpus.length,
-                    ActualAgentSum: wechatManager.getAllWorkers().length
+                    ExceptedAgentSum: require('os').cpus().length,
+                    ActualAgentSum: wechatManager.getAllWorkers().length || 0
                 });
             }
         });
@@ -96,7 +100,7 @@ function callback(){
          *      Region:           ONLY applicable if Mode is untrusted
          *  }
          */
-        broker.brokerAgent.onStartRequest(function(data){
+        broker.brokerAgent.onStartRequest(function(err, data){
             if(data.NodeId === wechatManager.id){
                 wechatManager.spawnWorker({
                     id: data.AgentId,

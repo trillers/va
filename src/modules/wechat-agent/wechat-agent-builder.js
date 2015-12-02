@@ -125,10 +125,23 @@ getBroker().then(function(broker){
 
 //def how to handle event from ipc
 function startHandler(args){
+    console.log(getBroker());
     worker = agentFactory(args.workerJson);
     //TODO check status
-    worker.start(args.options, function(){
+    worker.start(args.options, function(err){
+        if(err){
+            console.error("[system]: Failed to start worker id=" + args.workerJson.id)
+        }
         console.log("[system]: agent is started up id=" + args.workerJson.id);
+        worker.onNeedLogin(function(err, data){
+            if(err){
+                console.info('[system]: Failed to login');
+                return;
+            }
+            getBroker().then(function(broker){
+
+            })
+        });
     });
 }
 

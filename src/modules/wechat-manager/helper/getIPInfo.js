@@ -2,7 +2,7 @@ var os = require('os');
 var IPv4 = null;
 
 module.exports = function(){
-    if(!IPv4){
+    if(IPv4){
         return IPv4;
     }
     switch (process.platform){
