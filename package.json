@@ -11,6 +11,7 @@
   "dependencies": {
     "base-settings":  "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/base-settings.git",
     "vc":             "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/vc.git",
+    "va-settings":             "git+https://henryleu:c148960791ab761064ecfbb07b7fdf582ff008df@github.com/trillers/va-settings.git",
     "selenium-webdriver": "2.46.1",
     "bluebird": "2.9.34",
     "co": "4.6.0",

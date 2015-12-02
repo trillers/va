@@ -18,47 +18,20 @@ process.on('message', function(cmd) {
     ipcChannel[cmd.method].apply(null, [cmd.args])
 });
 
-//register external event listener
-getBroker().then(function(broker){
-     /*  msg: {
-      *      CreateTime: Number: Date#getTime() milliseconds
-      *      NodeId: String
-      *      AgentId: String
-      *      AgentStatus:
-      *       - starting
-      *       - logging
-      *       - mislogged
-      *       - logged
-      *       - exceptional
-      *       - aborted
-      *       - exited
-      *  }
-      */
-    setInterval(function(){
-        broker.brokerAgent.heartbeat({
-            CreateTime: (new Date()).getTime(),
-            AgentStatus: worker.getStatus(),
-            PId: worker.pid,
-            AgentId: worker.id,
-            NodeId: worker.managerId
-        });
-    }, settings.heartbeatGap);
+//def how to handle event from ipc
+function startHandler(args){
+    console.log(getBroker());
+    worker = agentFactory(args.workerJson);
+    //register external event listener
+    getBroker().then(function(broker){
+        //init agent broker
+        broker.brokerAgent.init(worker.id);
 
-    /**
-     *  msg: {
+        /*  msg: {
          *      CreateTime: Number: Date#getTime() milliseconds
          *      NodeId: String
          *      AgentId: String
-         *  }
-     */
-    broker.brokerAgent.onStatusRequest(function(data){
-        if(data.NodeId === worker.managerId && data.AgentId === worker.id){
-        /**
-         *  msg: {
-         *      CreateTime: Number: Date#getTime() milliseconds
-         *      NodeId: String
-         *      AgentId: String
-         *      AgentStatus: String
+         *      AgentStatus:
          *       - starting
          *       - logging
          *       - mislogged
@@ -68,65 +41,18 @@ getBroker().then(function(broker){
          *       - exited
          *  }
          */
-            broker.brokerAgent.statusResponse({
+        setInterval(function(){
+            broker.brokerAgent.heartbeat({
                 CreateTime: (new Date()).getTime(),
-                NodeId: worker.managerId,
+                AgentStatus: worker.getStatus(),
+                PId: worker.pid,
                 AgentId: worker.id,
-                AgentStatus: worker.getStatus()
-            })
-        }
+                NodeId: worker.managerId
+            });
+        }, settings.heartbeatGap);
+
+
     });
-
-    /**
-     *  msg: {
-         *      CreateTime: Number: Date#getTime() milliseconds
-         *      NodeId: String
-         *      AgentId: String
-         *  }
-     */
-    broker.brokerAgent.onProfileRequest(function(){
-        if(data.NodeId === worker.managerId && data.AgentId === worker.id){
-            /**
-             *  msg: {
-             *      CreateTime: Number: Date#getTime() milliseconds
-             *      NodeId: String
-             *      AgentId: String
-             *      OriginalHeadImgUrl: original head image url when we request profile
-             *      HeadImgId: ?
-             *      Nickname: String
-             *      Sex: 0 1 2
-             *      Region:
-             *  }
-             */
-            if(!worker.status.indexOf['login']){
-                broker.brokerAgent.profileResponse({
-                    err: {
-                        code: 404,
-                        message: '[system]: operation failed, the worker works abnormal'
-                    }
-                });
-                return;
-            }
-            worker.profileRequest(function(data){
-                broker.brokerAgent.profileResponse({
-                    CreateTime: (new Date()).getTime(),
-                    NodeId: worker.managerId,
-                    AgentId: worker.id,
-                    OriginalHeadImgUrl: data.headImgUrl,
-                    Nickname: data.nickname,
-                    Sex: data.sex,
-                    Region: data.place
-                })
-            })
-        }
-    })
-
-});
-
-//def how to handle event from ipc
-function startHandler(args){
-    console.log(getBroker());
-    worker = agentFactory(args.workerJson);
     //TODO check status
     worker.start(args.options, function(err){
         if(err){

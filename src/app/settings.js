@@ -1,4 +1,5 @@
 var settings = require('athena-settings');
+var va_settings = require('va-settings');
 
 var reconnectTime = 12*60*60*1000;
 
@@ -23,6 +24,8 @@ var services = {
 };
 
 module.exports = {
+    id: va_settings.id,
+    max_load: va_settings.max_load,
     reconnectTime: reconnectTime,
     fsUrl: fsUrl,
     wxIndexUrl: wxIndexUrl,
