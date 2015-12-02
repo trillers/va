@@ -1,8 +1,6 @@
 var webdriver = require('selenium-webdriver');
 var MYERROR = require('../settings/myerror');
-//external services
-var reset = require('./reset-pointer');
-//locators
+
 var searchLocator = webdriver.By.className('frm_search');
 
 module.exports = function(){
@@ -31,12 +29,10 @@ module.exports = function(){
                 console.warn('[flow]: user does not exist')
                 searchItem.clear();
                 driver.findElement(webdriver.By.css('.header')).click();
-                driver.call(reset)
-                    .thenCatch(function(err){
-                        console.warn('[flow]: Failed to clear search input');
-                        return webdriver.promise.rejected(new webdriver.error.Error(MYERROR.NO_RESULT.code, MYERROR.NO_RESULT.msg))
-                    })
-            }else{
+                driver.call(function(){
+                    return webdriver.promise.rejected(new webdriver.error.Error(MYERROR.NO_RESULT.code, MYERROR.NO_RESULT.msg))
+                });
+            } else {
                 //unknow error
                 console.error('[flow]: process stop error: unknown error');
                 return webdriver.promise.rejected(new webdriver.error.Error(MYERROR.UNKNOWN_ERROR.code, MYERROR.UNKNOWN_ERROR.msg))

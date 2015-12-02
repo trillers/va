@@ -32,7 +32,7 @@ function callback(){
     server.listen(3000);
 
     //build wechat manager
-    wechatManager = wechatManagerFactory({
+    GLOBAL.wechatManager = wechatManagerFactory({
         id: 'test',
         payloadNum: numCPUs
     });

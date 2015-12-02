@@ -10,11 +10,13 @@ var getCount = require('../util').getCount;
 var getBroker = require('../wechat-broker');
 var STATUS = require('./settings/constant').STATUS;
 var CONSTANT = require('./settings/constant');
+var microsFactory = require('../../app/macros');
 
 var findOneContact = require('./funcs/find-one-contact');
 var reset = require('./funcs/reset-pointer');
 var readProfile = require('./funcs/read-profile');
 var sendText = require('./funcs/send-text');
+var sendImage = require('./funcs/send-image');
 var spiderContactListInfo = require('./funcs/contact-list');
 var reverseProfileAsync = require('./funcs/profile-reverse');
 var spiderGroupListInfo = require('./funcs/group-list');
@@ -172,15 +174,18 @@ proto.init = function(bot){
 };
 
 proto.sendText = function(json, callback){
-    sendText.call(this, json, callback)
+    microsFactory().scheduleMacros(sendText, this, json, callback);
 };
 
 proto.sendImage = function(json, callback){
-    sendText.call(this, json, callback)
+    microsFactory().scheduleMacros(sendImage, this, json, callback);
+    //sendImage.call(this, json, callback)
 };
 
 proto.readProfile = function(bid, callback){
-    readProfile.call(this, bid, callback);
+    var micrios = microsFactory();
+    this.micrios = micrios;
+    micrios.scheduleMacros(readProfile, this, bid, callback);
 };
 
 proto.groupList = function(callback){

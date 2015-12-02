@@ -9,12 +9,14 @@ var fsServer = settings.fsUrl;
 var codeService = require('../services/codeService');
 var fineOneContact = require('./find-one-contact');
 var Promise = require('bluebird');
+var MYERROR = require('../settings/myerror');
 
 module.exports = readProfile = function(bid, callback){
     console.info("[transaction]: begin to read profile of contact that bid is " + bid);
     var self = this;
     var driver = self.driver;
-    driver.call(fineOneContact, driver, bid)
+
+    this.micrios.scheduleCommand(fineOneContact, driver, reset, bid)
         .then(function(){
             var data = {};
             self.driver.sleep(500);
@@ -71,11 +73,12 @@ module.exports = readProfile = function(bid, callback){
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read head img');
-                    return webdriver.promise.rejected(e);
+                    console.error(e.message);
+                    return webdriver.promise.rejected(new webdriver.error.Error(MYERROR.FILE_SERVER.code, MYERROR.FILE_SERVER.msg));
                 })
         })
-        .thenCatch(function(){
-            console.error("[flow]: Failed to find the contact that bid is " + bid);
+        .thenCatch(function(e){
+            console.error("[flow]: read profile, Failed to find the contact that bid is " + bid);
             return callback(e);
         })
 };
