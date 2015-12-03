@@ -1,6 +1,6 @@
 var webdriver = require('selenium-webdriver');
-var findOneContact = require('./funcs/find-one-contact');
-var reset = require('./funcs/reset-pointer');
+var findOneContact = require('./find-one-contact');
+var reset = require('./reset-pointer');
 var editorLocator = webdriver.By.css('#editArea');
 
 module.exports = function sendImage(json, callback){

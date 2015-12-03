@@ -4,9 +4,9 @@ var _ = require('underscore');
 var url = require('url');
 var qs = require('querystring');
 var reset = require('./reset-pointer');
-var settings = require('../app/settings');
+var settings = require('../../../app/settings');
 var fsServer = settings.fsUrl;
-var codeService = require('../services/codeService');
+var codeService = require('../../util/codeService');
 var fineOneContact = require('./find-one-contact');
 var Promise = require('bluebird');
 var MYERROR = require('../settings/myerror');
@@ -16,7 +16,7 @@ module.exports = readProfile = function(bid, callback){
     var self = this;
     var driver = self.driver;
 
-    this.micrios.scheduleCommand(fineOneContact, driver, reset, bid)
+    this.micrios.scheduleCommand(fineOneContact, driver, reset)
         .then(function(){
             var data = {};
             self.driver.sleep(500);

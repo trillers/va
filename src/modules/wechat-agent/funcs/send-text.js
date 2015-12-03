@@ -1,6 +1,6 @@
 var webdriver = require('selenium-webdriver');
-var findOneContact = require('./funcs/find-one-contact');
-var reset = require('./funcs/reset-pointer');
+var findOneContact = require('./find-one-contact');
+var reset = require('./reset-pointer');
 
 module.exports = function sendText(json, callback){
     var self = this;

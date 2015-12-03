@@ -174,18 +174,18 @@ proto.init = function(bot){
 };
 
 proto.sendText = function(json, callback){
-    microsFactory().scheduleMacros(sendText, this, json, callback);
+    this.micrios = microsFactory();
+    this.micrios.scheduleMacros(sendText, this, json, callback);
 };
 
 proto.sendImage = function(json, callback){
-    microsFactory().scheduleMacros(sendImage, this, json, callback);
-    //sendImage.call(this, json, callback)
+    this.micrios = microsFactory();
+    this.micrios.scheduleMacros(sendImage, this, json, callback);
 };
 
 proto.readProfile = function(bid, callback){
-    var micrios = microsFactory();
-    this.micrios = micrios;
-    micrios.scheduleMacros(readProfile, this, bid, callback);
+    this.micrios = microsFactory();
+    this.micrios.scheduleMacros(readProfile, this, bid, callback);
 };
 
 proto.groupList = function(callback){
