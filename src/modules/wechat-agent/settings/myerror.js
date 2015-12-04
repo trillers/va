@@ -1,4 +1,8 @@
 module.exports ={
+    NO_SUCH_SESSION: {
+        code: 6,
+        msg: 'No such session'
+    },
     NO_RESULT: {
         code: 801,
         msg: 'no result'

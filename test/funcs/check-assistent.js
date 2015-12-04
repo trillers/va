@@ -21,7 +21,6 @@ function checkHost(data, callback){
         console.log(data)
     });
     macros.scheduleCommand(after, driver, function(){
-        console.log('???????')
         var nav = new webdriver.WebDriver.Navigation(driver);
         nav.refresh();
     })
@@ -40,8 +39,11 @@ macros.scheduleMacros(checkHost, null, {
     sex: 1
 }, function(err, data){
     console.log(err);
-    console.log("ok")
-})
+    console.log("ok");
+    if(e.message === 'no such session'){
+        console.log("boom!!!!!!!!");
+    }
+});
 
 function middle(profile){
     var obj = {};
@@ -98,8 +100,8 @@ function after(){
     driver.sleep(1000);
     driver.findElements({'css': 'div.contact_item.on'}).then(function(items){
         console.log(items);
-        return webdriver.promise.rejected(new webdriver.error.Error(400, 'no element'));
-        //return items[0].click()
+        //return webdriver.promise.rejected(new webdriver.error.Error(400, 'no element'));
+        return items[0].click()
     });
     var editEl = driver.findElement(webdriver.By.css('#editArea'));
     return driver.call(function(){
