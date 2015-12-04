@@ -10,8 +10,9 @@ var codeService = require('../../util/codeService');
 var fineOneContact = require('./find-one-contact');
 var Promise = require('bluebird');
 var MYERROR = require('../settings/myerror');
+var readHeadImgAsync = Promise.promisify(readHeadImg);
 
-module.exports = readProfile = function(bid, callback){
+module.exports = readProfile = function readProfile(bid, callback){
     console.info("[transaction]: begin to read profile of contact that bid is " + bid);
     var self = this;
     var driver = self.driver;
@@ -83,14 +84,14 @@ module.exports = readProfile = function(bid, callback){
         })
 };
 
-exports.readProfile.openPanel = openPanel;
-exports.readProfile.reverse = openPanel;
-exports.readProfile.remark = openPanel;
-exports.readProfile.readPlace = openPanel;
-exports.readProfile.readSex = openPanel;
-exports.readProfile.readNickName = openPanel;
-exports.readProfile.readRemark = openPanel;
-exports.readProfile.readHeadImg = openPanel;
+module.exports.openPanel = openPanel;
+module.exports.reverse = reverse;
+module.exports.remark = remark;
+module.exports.readPlace = readPlace;
+module.exports.readSex = readSex;
+module.exports.readNickname = readNickname;
+module.exports.readRemark = readRemark;
+module.exports.readHeadImgAsync = readHeadImgAsync;
 
 function openPanel(){
     var self = this;
@@ -250,8 +251,6 @@ function readRemark(data){
         })
 }
 
-var readHeadImgAsync = Promise.promisify(readHeadImg);
-
 function readHeadImg(data, callback){
     var self = this;
     var headEl =  self.driver.findElement({'css': 'div#mmpop_profile>div.profile_mini div.profile_mini_hd img'});
@@ -279,9 +278,7 @@ function readHeadImg(data, callback){
                     }
                     console.info('[flow]: Succeed to upload the headImg');
                     data.headimgid = json['media_id'] || "";
-                    reset(self, function(){
-                        return callback(json.err, data);
-                    });
+                    callback(json.err, data);
                 });
             })
         })

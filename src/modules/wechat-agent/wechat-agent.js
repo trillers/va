@@ -2,6 +2,7 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var request = require('request');
 var settings = require('../../app/settings');
+var webdriver = require('selenium-webdriver');
 var createDriver = require('../webdriver/webdriverFactory');
 var fsServer = settings.fsUrl;
 var TaskQueue = require('l-mq');
@@ -65,6 +66,7 @@ proto.start = function(options, callback){
             //TODO check
             //pass than polling
             //failed than exit
+
         } else {
             //polling
 

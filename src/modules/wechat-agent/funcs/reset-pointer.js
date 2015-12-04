@@ -5,7 +5,7 @@ var searchLocator = webdriver.By.className('frm_search');
 
 module.exports = function(callback){
     var self = this;
-    var searchItem = driver.findElement(searchLocator);
+    var searchItem = self.driver.findElement(searchLocator);
     searchItem.clear();
     var titleEL = self.driver.findElement(webdriver.By.className('title_name'));
     return titleEL.getText()

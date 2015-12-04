@@ -10,38 +10,51 @@ function Macros(){
 }
 
 /**
- * macrosify a executor
+ * macrosify a executor, node style and promise support
+ * build command in macros internally
  * @param {Function} executor
  * @param {Object}   context
  * @param {..*}    var_args Any arguments to pass to the function
- * @param {Function} callback
+ * @param {Function} opt_callback
  */
-Macros.prototype.scheduleMacros = function(executor, context, var_args, callback){
+Macros.prototype.scheduleMacros = function(executor, context, var_args, opt_callback){
     var me = this,
         args = [].slice.call(arguments),
         cb = args[args.length-1],
-        len = arguments.length;
-    if(len < 3 || (typeof cb != "function")){
+        len = arguments.length,
+        rem = null;
+    if(len < 3){
         throw new Error('input illegal when schedule a macros');
     }
-    var rem = args.slice(2, len-1);
-    executor.apply(context || null, rem.concat([function(e, data){
+    if(typeof cb !== 'function'){
+        cb = function noop(){};
+        rem = args.slice(2, len);
+    } else{
+        rem = args.slice(2, len-1);
+    }
+    var invocation = executor.apply(context || null, rem.concat([function(e, data){
         if(e){
             if(me._cmdStack.length){
                 return me.undo().then(function(){
                     cb(e);
                 })
-                .thenCatch(function(e){
-                    console.error('Failed to execute undo of macros');
-                    console.log(e)
-                    cb(e)
-                })
+                    .thenCatch(function(e){
+                        console.error('Failed to execute undo of macros');
+                        console.log(e);
+                        cb(e)
+                    })
             }
             cb(e);
         } else {
             cb(null)
         }
-    }]))
+    }]));
+    if(isPromise(invocation)){
+        return invocation;
+    }
+    function isPromise(v){
+        return !!v && typeof v === 'object' && (typeof (v['then']) === 'function' )
+    }
 };
 
 /**
@@ -78,6 +91,23 @@ Macros.prototype.scheduleCommand = function(executor, driver, undo, opt_exArgs, 
 
     validateInput(executor, undo, driver);
 
+    var command = {
+        executor: executor,
+        undo: {
+            method: undo,
+            args: unArgs
+        }
+    };
+    driver.controlFlow().execute(function(){
+        me._cmdStack.push(command);
+    });
+    if(!exArgs){
+        return driver.call(executor, driver);
+    }
+    return driver.controlFlow().execute(function(){
+        return executor.apply(driver, exArgs);
+    });
+
     function validateInput(){
         if(arguments.length < 3) {
             throw new Error('input illegal when schedule a command')
@@ -98,23 +128,6 @@ Macros.prototype.scheduleCommand = function(executor, driver, undo, opt_exArgs, 
             throw new Error('input illegal when schedule a command: undo args must be a array')
         }
     }
-
-    var command = {
-        executor: executor,
-        undo: {
-            method: undo,
-            args: unArgs
-        }
-    };
-    driver.controlFlow().execute(function(){
-        me._cmdStack.push(command);
-    });
-    if(!exArgs.length){
-        return driver.call(executor, driver);
-    }
-    return driver.controlFlow().execute(function(){
-        return executor.apply(driver, exArgs);
-    });
 };
 
 module.exports =  function(){

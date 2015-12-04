@@ -69,7 +69,37 @@ util.deepClone = function(a){
     }
     return a;
 };
-util.isArray = function(a){obj
+util.objMatchRate = function(o1, o2){
+    var l1 = Object.keys(o1).length,
+        l2 = Object.keys(o2).length,
+        l = l1 > l2 ? l1 : l2,
+        i = l1 > l2 ? o2 : o1,
+        a = i === o1 ? o2 : o1,
+        len=0;
+    for(var p in i){
+        a[p] === i[p] && len++;
+    }
+    return parseInt(len/l*100, 10).toFixed(2);
+};
+util.objPick = function(o){
+    var args = [].slice.call(arguments, 1);
+    for(var p in o){
+        if(args.indexOf(p) === -1){
+            delete  o[p]
+        }
+    }
+    return o;
+};
+util.objExclude = function(o){
+    var args = [].slice.call(arguments, 1);
+    args.forEach(function(p){
+        if(p in o){
+            delete o[p];
+        }
+    });
+    return o;
+};
+util.isArray = function(a){
     return Array.isArray(a);
 };
 util.isObject = function(a){
@@ -91,3 +121,5 @@ util.isGenerator = function(fn) {
     return fn.constructor.name === 'GeneratorFunction';
 };
 util.noop = function(){};
+
+module.exports = util;
