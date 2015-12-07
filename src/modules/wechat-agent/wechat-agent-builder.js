@@ -64,6 +64,17 @@ function startHandler(args){
                 console.info('[system]: Failed to login');
                 return;
             }
+            var actions = {
+                start,
+                restart,
+                stop,
+                sendText,
+                sendImage,
+                readProfile,
+                groupList,
+                contactList
+            };
+            //def action response
             getBroker().then(function(broker){
 
             })
