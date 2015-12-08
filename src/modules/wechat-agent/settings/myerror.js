@@ -22,5 +22,9 @@ module.exports ={
     WECHAT_API: {
         code: 805,
         msg: 'Failed to interact with weChat api'
+    },
+    USER_NO_HOST: {
+        code:806,
+        msg: 'the current user is not host'
     }
 };

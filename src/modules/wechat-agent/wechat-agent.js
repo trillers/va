@@ -12,6 +12,7 @@ var STATUS = require('./settings/constant').STATUS;
 var CONSTANT = require('./settings/constant');
 var microsFactory = require('../../app/macros');
 var helper = require('./helper');
+var myError = require('./settings/myerror');
 
 var findOneContact = require('./funcs/find-one-contact');
 var reset = require('./funcs/reset-pointer');
@@ -21,6 +22,7 @@ var sendImage = require('./funcs/send-image');
 var spiderContactListInfo = require('./funcs/contact-list');
 var reverseProfileAsync = require('./funcs/profile-reverse');
 var spiderGroupListInfo = require('./funcs/group-list');
+var checkHost = require('./funcs/check-host');
 
 function WechatAgent(worker){
     EventEmitter.call(this);
@@ -52,7 +54,6 @@ proto.start = function(options, callback){
             console.log(err);
             return callback(err);
         }
-        self._transition(STATUS.LOGGING);
         if(options.intention === CONSTANT.INTENTION.REGISTER){
             //TODO register
             //TODO check
@@ -64,10 +65,25 @@ proto.start = function(options, callback){
             //TODO check
             //pass than polling
             //failed than exit
+            checkHost(self, {}).then(function(result){
+                if(result){
+                    //logged in
+                    //begin to polling
+                    self._transition(STATUS.LOGGING);
+                    callback(null);
+
+                } else {
+                    //login failed
+                    self.stop().then(function(){
+                        callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
+                    })
+                }
+            })
 
         } else {
             //polling
-
+            self._transition(STATUS.LOGGING);
+            callback(null);
         }
     });
 };
@@ -291,7 +307,7 @@ proto.onDisconnect = function(handler){
     this.removeAllListeners('disconnect').on('disconnect', handler);
 };
 
-proto._walkChatList = function(callback){
+proto.walkChatList = function(callback){
     var self = this;
     self.driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
         .then(function(collection){
@@ -363,7 +379,7 @@ proto._transition = function(status){
     self.prevStatus = self.status;
     self.status = status;
     getBroker().then(function(broker){
-        broker.brokerAgent.statusChange({
+        broker.brokerAgent.agentStatusChange({
             NewStatus: self.status,
             OldStatus: self.prevStatus,
             CreateTime: (new Date()).getTime(),

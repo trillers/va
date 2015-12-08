@@ -2,8 +2,10 @@ var waitFor = require('../../util').waitFor;
 var request = require('request');
 var receiveMessageHandler = require('../funcs/receive-message');
 var suggestFriendHandler = require('../funcs/friend-suggest-message');
+var fsServer = require('../../../app/settings').fsUrl;
+var STATUS = require('../settings/constant').STATUS;
 
-exports.getLoginQr = function getLoginQr(wcBot, callback){
+var getLoginQr = exports.getLoginQr = function (wcBot, callback){
     var self = wcBot;
     console.info("[flow]: enter git login qr");
     waitFor(self.driver, {css: '.qrcode img'}, 50000)
@@ -54,7 +56,7 @@ exports.getLoginQr = function getLoginQr(wcBot, callback){
         })
 };
 
-exports.needLogin = function needLogin(wcBot, callback){
+var needLogin = exports.needLogin = function (wcBot, callback){
     var self = wcBot;
     getLoginQr(self, function(err, data){
         if(err){
@@ -70,7 +72,7 @@ exports.needLogin = function needLogin(wcBot, callback){
 };
 
 
-exports.pollingDispatcher = function pollingDispatcher(self,input){
+var pollingDispatcher = exports.pollingDispatcher = function (self,input){
     var handlers = {
         '朋友推荐消息': suggestFriendHandler,
         'Recommend' : suggestFriendHandler,

@@ -20,63 +20,57 @@ process.on('message', function(cmd) {
 
 //def how to handle event from ipc
 function startHandler(args){
-    console.log(getBroker());
+    console.log("@@@@@@@@@@@@")
+    console.log(args);
     worker = agentFactory(args.workerJson);
-    //register external event listener
-    getBroker().then(function(broker){
-        //init agent broker
-        broker.brokerAgent.init(worker.id);
-
-        /*  msg: {
-         *      CreateTime: Number: Date#getTime() milliseconds
-         *      NodeId: String
-         *      AgentId: String
-         *      AgentStatus:
-         *       - starting
-         *       - logging
-         *       - mislogged
-         *       - logged
-         *       - exceptional
-         *       - aborted
-         *       - exited
-         *  }
-         */
-        setInterval(function(){
-            broker.brokerAgent.heartbeat({
-                CreateTime: (new Date()).getTime(),
-                AgentStatus: worker.getStatus(),
-                PId: worker.pid,
-                AgentId: worker.id,
-                NodeId: worker.managerId
-            });
-        }, settings.heartbeatGap);
-
-
-    });
     //TODO check status
     worker.start(args.options, function(err){
         if(err){
             console.error("[system]: Failed to start worker id=" + args.workerJson.id)
         }
         console.log("[system]: agent is started up id=" + args.workerJson.id);
-        worker.onNeedLogin(function(err, data){
-            if(err){
-                console.info('[system]: Failed to login');
-                return;
-            }
-            var actions = {
-                start,
-                restart,
-                stop,
-                sendText,
-                sendImage,
-                readProfile,
-                groupList,
-                contactList
-            };
-            //def action response
-            getBroker().then(function(broker){
+        var actionsMap = {
+            'send-txt-contact': 'sendText',
+            'send-img-contact': 'sendImage',
+            'send-txt-group': 'sendText',
+            'send-img-group': 'sendImage',
+            'profile-request': 'readProfile',
+            'sync-groups': 'groupList',
+            'sync-contacts': 'contactList',
+            'polling-list': 'walkChatList'
+        };
+        //def action response
+        getBroker().then(function(broker){
 
+            broker.brokerAgent.init(worker.id);
+
+            setInterval(function(){
+                broker.brokerAgent.heartbeat({
+                    CreateTime: (new Date()).getTime(),
+                    AgentStatus: worker.status,
+                    PId: worker.pid,
+                    AgentId: worker.id,
+                    NodeId: worker.managerId
+                });
+            }, settings.heartbeatGap);
+
+            broker.brokerAgent.onActionOut(function(err, data, msg){
+                worker[actionsMap[data.Action]](function(err, result){
+                    broker.brokerAgent.actionFeedback(result);
+                    broker.brokerAgent.finish(msg);
+                })
+            }, worker.id);
+
+            worker.onNeedLogin(function(err, data){
+                if(!err){
+                    broker.brokerAgent.actionIn(data);
+                }
+            });
+
+            worker.onReceive(function(err, data){
+                if(!err){
+                    broker.brokerAgent.actionIn(data);
+                }
             })
         });
     });

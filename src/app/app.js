@@ -42,6 +42,14 @@ function callback(){
         //agent manager broker init
         broker.brokerManager.init(wechatManager.id);
 
+        //am is started
+        broker.brokerManager.statusChange({
+            CreateTime: new Date(),
+            NodeId: wechatManager.id,
+            OldStatus: 'stopped',
+            NewStatus: 'started'
+        });
+
         //continue to heartbeat
         setInterval(function(){
             broker.brokerManager.heartbeat({
@@ -80,7 +88,7 @@ function callback(){
         broker.brokerManager.onInfoRequest(function(err, data){
             console.log('[system]: receive a status request event');
             broker.brokerManager.infoResponse({
-                CreateTime: new Date(),
+                CreateTime: (new Date()).getTime(),
                 NodeId: wechatManager.id,
                 RAM: require('../modules/wechat-manager/helper/getRAMUsage')(),
                 CPU: 0,
@@ -126,7 +134,7 @@ function callback(){
          *  }
          *
          */
-        broker.brokerAgent.onCommand(function(err, data){
+        broker.brokerManager.onCommand(function(err, data){
             if(data.Command === 'start'){
                 wechatManager.spawnWorker({
                     id: data.AgentId,
