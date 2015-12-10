@@ -1,12 +1,11 @@
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
+var myutil = require('../util/myutil');
 var request = require('request');
 var settings = require('../../app/settings');
 var webdriver = require('selenium-webdriver');
 var createDriver = require('../webdriver/webdriverFactory');
-var fsServer = settings.fsUrl;
 var TaskQueue = require('l-mq');
-var getCount = require('../util').getCount;
 var getBroker = require('../wechat-broker');
 var STATUS = require('./settings/constant').STATUS;
 var CONSTANT = require('./settings/constant');
@@ -14,7 +13,6 @@ var microsFactory = require('../../app/macros');
 var helper = require('./helper');
 var myError = require('./settings/myerror');
 
-var findOneContact = require('./funcs/find-one-contact');
 var reset = require('./funcs/reset-pointer');
 var readProfile = require('./funcs/read-profile');
 var sendText = require('./funcs/send-text');
@@ -22,7 +20,7 @@ var sendImage = require('./funcs/send-image');
 var spiderContactListInfo = require('./funcs/contact-list');
 var reverseProfileAsync = require('./funcs/profile-reverse');
 var spiderGroupListInfo = require('./funcs/group-list');
-var checkHost = require('./funcs/check-host');
+var getHostProfile = require('./funcs/get-host-profile');
 
 function WechatAgent(worker){
     EventEmitter.call(this);
@@ -32,7 +30,6 @@ function WechatAgent(worker){
     this.status = worker.status || STATUS.STARTING;
     this.prevStatus = worker.prevStatus || STATUS.STARTING;
     this.sendTo = null;
-    this.driver = createDriver();
     this.taskQueue = new TaskQueue(1);
     this.loggedIn = false;
     this.callCsToLogin = null;
@@ -45,6 +42,13 @@ util.inherits(WechatAgent, EventEmitter);
 
 var proto = WechatAgent.prototype;
 
+proto.withDriver = function(driver){
+    if(!driver.instanceof(webdriver.WebDriver)){
+        throw new Error('Failed to create agent when with driver, driver type error')
+    }
+    this.driver = driver || createDriver();
+};
+
 proto.start = function(options, callback){
     console.info('[system]: an agent is startup [id]=' + this.id);
     var self = this;
@@ -56,91 +60,49 @@ proto.start = function(options, callback){
         }
         if(options.intention === CONSTANT.INTENTION.REGISTER){
             //TODO register
-            //TODO check
             //pass than emit register event
             //failed than exit
+            return self.driver.call(getHostProfile, self).then(function(profile){
+                self.emit('first-profile', {err: null, data: profile});
+                return callback(null, null);
+            })
+            .thenCatch(function(e){
+                console.error(e);
+                return callback(e, null);
+            })
         }
         //mode trusted | untrusted
         if(options.mode === CONSTANT.MODE.UNTRUSTED){
-            //TODO check
-            //pass than polling
-            //failed than exit
-            checkHost(self, {}).then(function(result){
-                if(result){
-                    //logged in
-                    //begin to polling
+            var oriProfile = {
+                nickname: options.Nickname,
+                sex: options.Sex,
+                place: options.Region
+            };
+            self.driver.call(getHostProfile, self).then(function(currProfile){
+                if(matchUser(currProfile, oriProfile)){
                     self._transition(STATUS.LOGGING);
                     callback(null);
 
                 } else {
-                    //login failed
                     self.stop().then(function(){
                         callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
                     })
                 }
+            }).thenCatch(function(e){
+                callback(e);
             })
 
         } else {
-            //polling
             self._transition(STATUS.LOGGING);
             callback(null);
         }
+        function matchUser(currPro, oriPro){
+            var expectRate = 75;
+            myutil.objExclude(currPro, 'botid');
+            var actualRate = myutil.objMatchRate(oriPro, currPro);
+            return actualRate >= expectRate
+        }
     });
-};
-
-proto._login = function(callback){
-    var self = this;
-    console.log("[flow]: Begin to login");
-    self.driver.get(settings.wxIndexUrl)
-        .then(function(){
-            helper.needLogin(self, function(err, media_id){
-                if(err){
-                    console.error(err);
-                    return self.stop()
-                        .then(function(){
-                            return self.start();
-                        });
-                }
-            });
-            self.callCsToLogin = setInterval(function(){
-                helper.needLogin(self, function(err, media_id){
-                    if(err){
-                        console.error(err);
-                        self.stop()
-                            .then(function(){
-                                return self.start();
-                            });
-                    }
-                });
-            }, settings.callCsToLoginGap);
-            self.waitForLogin = setInterval(function(){
-                self.driver.findElement({css: '.nickname span'})
-                    .then(function(span){
-                        return span.getText()
-                    })
-                    .then(function(txt){
-                        if(!self.loggedIn && txt != ""){
-                            clearInterval(self.waitForLogin);
-                            clearInterval(self.callCsToLogin);
-                            self.loggedIn = true;
-                            self.emit('login', {err: null, data: {botid: self.id}});
-                            callback(null, null);
-                        }
-                    })
-                    .thenCatch(function(e){
-                        console.error("[system]: Failed to wait for login");
-                        console.error(e);
-                        self.stop().then(function(){
-                            self.start();
-                        });
-                    })
-            }, settings.waitForLoginGap);
-        })
-        .thenCatch(function(e){
-            console.error("[system]: Failed to login");
-            console.error(e);
-            callback(e, null);
-        });
 };
 
 proto.restart = function(){
@@ -285,12 +247,17 @@ proto.onReceive = function(handler){
     });
 };
 
+proto.onFirstProfile = function(handler){
+    var me = this;
+    me.removeAllListeners('first-profile').on('first-profile', function(data){
+        handler.call(me, data.err, data.data)
+    });
+};
+
 proto.onNeedLogin = function(handler){
-    var self = this;
-    this.removeAllListeners('needLogin').on('needLogin', function(data){
-        var err = data.err;
-        var data = data.data;
-        handler.call(self, err, data);
+    var me = this;
+    me.removeAllListeners('needLogin').on('needLogin', function(data){
+        handler.call(me, data.err, data.data)
     });
 };
 
@@ -387,6 +354,63 @@ proto._transition = function(status){
             NodeId: self.managerId
         })
     })
+};
+
+proto._login = function(callback){
+    var self = this;
+    console.log("[flow]: Begin to login");
+    console.log(settings.wxIndexUrl);
+    console.log(self.driver);
+    self.driver.get(settings.wxIndexUrl)
+        .then(function(){
+            helper.needLogin(self, function(err){
+                if(err){
+                    console.error(err);
+                    return self.stop()
+                        .then(function(){
+                            return self.start();
+                        });
+                }
+            });
+            self.callCsToLogin = setInterval(function(){
+                helper.needLogin(self, function(err){
+                    if(err){
+                        console.error(err);
+                        self.stop()
+                            .then(function(){
+                                return self.start();
+                            });
+                    }
+                });
+            }, settings.callCsToLoginGap);
+            self.waitForLogin = setInterval(function(){
+                self.driver.findElement({css: '.nickname span'})
+                    .then(function(span){
+                        return span.getText()
+                    })
+                    .then(function(txt){
+                        if(!self.loggedIn && txt != ""){
+                            clearInterval(self.waitForLogin);
+                            clearInterval(self.callCsToLogin);
+                            self.loggedIn = true;
+                            self.emit('login', {err: null, data: {botid: self.id}});
+                            callback(null, null);
+                        }
+                    })
+                    .thenCatch(function(e){
+                        console.error("[system]: Failed to wait for login");
+                        console.error(e);
+                        self.stop().then(function(){
+                            self.start();
+                        });
+                    })
+            }, settings.waitForLoginGap);
+        })
+        .thenCatch(function(e){
+            console.error("[system]: Failed to login");
+            console.error(e);
+            callback(e, null);
+        });
 };
 
 module.exports = function(worker){

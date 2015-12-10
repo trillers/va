@@ -34,7 +34,7 @@ function callback(){
     //build wechat manager
     wechatManager = wechatManagerFactory({
         id: settings.id,
-        max_load: settings.max_load
+        payloadNum: settings.max_load
     });
 
     //bind vc event listener
@@ -135,6 +135,8 @@ function callback(){
          *
          */
         broker.brokerManager.onCommand(function(err, data){
+            console.log("***************")
+            console.log(data)
             if(data.Command === 'start'){
                 wechatManager.spawnWorker({
                     id: data.AgentId,
