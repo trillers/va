@@ -11,8 +11,9 @@ var validateIsNormalStrOrNot = require('../../util').validateIsNormalStrOrNot;
  * @param driver
  * @param callback
  */
-module.exports = function(self, callback){
+module.exports = function(callback){
     console.info("[transaction]: begin to read contact list");
+    var self = this;
     var driver = self.driver;
     var contactArr = [];
     var startTime = null;
@@ -82,7 +83,7 @@ module.exports = function(self, callback){
                 });
             driver.sleep(500);
             driver.call(function(){
-                reset(self, function(){
+                reset.call(self, function(){
                     callback(null, contactArr);
                 });
             });

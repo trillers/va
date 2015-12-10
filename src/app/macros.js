@@ -46,7 +46,7 @@ Macros.prototype.scheduleMacros = function(executor, context, var_args, opt_call
             }
             cb(e);
         } else {
-            cb(null)
+            cb(null, data)
         }
     }]));
     if(isPromise(invocation)){
@@ -65,10 +65,10 @@ Macros.prototype.undo = function(){
     var undos = [];
     this._cmdStack.forEach(function(cmd){
         if(cmd.undo && cmd.undo.args){
-            undos.push(cmd.undo.method.apply(null, cmd.undo.args));
+            undos.push(cmd.undo.method.apply(cmd.undo.context, cmd.undo.args));
         }
         else{
-            return undos.push(cmd.undo.method());
+            return undos.push(cmd.undo.method.apply(cmd.undo.context));
         }
     });
     return webdriver.promise.all(undos)
@@ -77,35 +77,37 @@ Macros.prototype.undo = function(){
 /**
  * commandify function
  * @param {Function}    executor
- * @param {WebDriver}   driver
+ * @param {WebDriver | bot}   context
  * @param {Function}    undo
  * @param               opt_exArgs
  * @param               opt_unArgs
  * @returns {*}
  */
-Macros.prototype.scheduleCommand = function(executor, driver, undo, opt_exArgs, opt_unArgs){
+Macros.prototype.scheduleCommand = function(executor, context, undo, opt_exArgs, opt_unArgs){
     var args = [].slice.call(arguments),
         me = this;
     var exArgs = args[3] || null;
     var unArgs = args[4] || null;
+    var driver = (context instanceof webdriver.WebDriver === true) ? context : context.driver
 
-    validateInput(executor, undo, driver);
+    validateInput(executor, undo, context);
 
     var command = {
         executor: executor,
         undo: {
             method: undo,
-            args: unArgs
+            args: unArgs,
+            context: context
         }
     };
     driver.controlFlow().execute(function(){
         me._cmdStack.push(command);
     });
     if(!exArgs){
-        return driver.call(executor, driver);
+        return driver.call(executor, context);
     }
     return driver.controlFlow().execute(function(){
-        return executor.apply(driver, exArgs);
+        return executor.apply(context, exArgs);
     });
 
     function validateInput(){

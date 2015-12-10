@@ -43,7 +43,7 @@ util.inherits(WechatAgent, EventEmitter);
 var proto = WechatAgent.prototype;
 
 proto.withDriver = function(driver){
-    if(!driver.instanceof(webdriver.WebDriver)){
+    if(typeof driver !== 'undefined' && !!driver.instanceOf(webdriver.WebDriver)){
         throw new Error('Failed to create agent when with driver, driver type error')
     }
     this.driver = driver || createDriver();
@@ -64,6 +64,7 @@ proto.start = function(options, callback){
             //failed than exit
             return self.driver.call(getHostProfile, self).then(function(profile){
                 self.emit('first-profile', {err: null, data: profile});
+                //self.emit('login', {err: null, data: {botid: self.id}});
                 return callback(null, null);
             })
             .thenCatch(function(e){
@@ -81,6 +82,7 @@ proto.start = function(options, callback){
             self.driver.call(getHostProfile, self).then(function(currProfile){
                 if(matchUser(currProfile, oriProfile)){
                     self._transition(STATUS.LOGGING);
+                    self.emit('login', {err: null, data: {botid: self.id}});
                     callback(null);
 
                 } else {
@@ -93,6 +95,7 @@ proto.start = function(options, callback){
             })
 
         } else {
+            //self.emit('login', {err: null, data: {botid: self.id}});
             self._transition(STATUS.LOGGING);
             callback(null);
         }
@@ -153,61 +156,75 @@ proto.init = function(bot){
 
 proto.sendText = function(json, callback){
     this.micrios = microsFactory();
-    this.micrios.scheduleMacros(sendText, this, json, callback);
+    this.micrios.scheduleMacros(sendText, this, {sendTo: json.BuId, content: json.Content}, callback);
 };
 
 proto.sendImage = function(json, callback){
     this.micrios = microsFactory();
-    this.micrios.scheduleMacros(sendImage, this, json, callback);
+    this.micrios.scheduleMacros(sendImage, this, {sendTo: json.BuId, content: json.MediaId}, callback);
 };
 
-proto.readProfile = function(bid, callback){
+proto.readProfile = function(json, callback){
     this.micrios = microsFactory();
-    this.micrios.scheduleMacros(readProfile, this, bid, callback);
+    this.micrios.scheduleMacros(readProfile, this, json.BuId, callback);
 };
 
 proto.groupList = function(callback){
-    spiderGroupListInfo.call(this, callback);
+    this.micrios = microsFactory();
+    this.micrios.scheduleMacros(spiderGroupListInfo, this, callback);
 };
 
 proto.contactList = function(callback){
-    var self = this;
     var resultList = null;
-    spiderContactListInfo(self, function(err, list){
+    var self = this;
+    var doneIndex = 0;
+    self.micrios = microsFactory();
+    self.micrios.scheduleMacros(spiderContactListInfo, self, done);
+    function done(err, list){
         resultList = list;
         if(err){
             return callback(err);
         }
-        reset(self, function(err){
+        reset.call(self, function(err){
             if(err){
                 //TODO
             }
             list.forEach(function(contact){
+                //read his profile, and send a remark contact event
                 if(contact.nickname.substr(0, 3) != 'bu-'){
-                    self.readProfile(contact.nickname, function(err, data){
+                    readProfile.call(self, contact.nickname, function(err, data){
                         if(err){
                             console.log("[flow]: contact list, Failed to get contact list");
                             console.warn(err);
+                            return callback(err)
                         }else{
-                            data.botid = self.id;
+                            checkDone(list);
                             self.emit('remarkcontact', {err: null, data: data})
                         }
                     });
-                }else{
-                    //入队
-                    self.taskQueue.enqueue(reverseProfileAsync, {args:[self, contact.nickname]}, function(err, data){
+                }
+                //clear the bu- remark, and send a remark contact event
+                else{
+                    reverseProfileAsync.call(self, contact.nickname, function(err, data){
                         if(err){
                             console.log("[flow]: contact list, Failed to remark contact");
                             console.warn(err);
+                            return callback(err)
                         }else{
+                            checkDone(list);
                             self.emit('remarkcontact', {err: null, data: data})
                         }
                     });
-
                 }
             });
         });
-    })
+    }
+    function checkDone(list){
+        doneIndex++;
+        if(doneIndex === list.length){
+            callback(null);
+        }
+    }
 };
 
 proto.onContactProfile = function(handler){
@@ -359,8 +376,6 @@ proto._transition = function(status){
 proto._login = function(callback){
     var self = this;
     console.log("[flow]: Begin to login");
-    console.log(settings.wxIndexUrl);
-    console.log(self.driver);
     self.driver.get(settings.wxIndexUrl)
         .then(function(){
             helper.needLogin(self, function(err){
@@ -393,7 +408,6 @@ proto._login = function(callback){
                             clearInterval(self.waitForLogin);
                             clearInterval(self.callCsToLogin);
                             self.loggedIn = true;
-                            self.emit('login', {err: null, data: {botid: self.id}});
                             callback(null, null);
                         }
                     })

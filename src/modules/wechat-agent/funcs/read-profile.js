@@ -17,7 +17,7 @@ module.exports = readProfile = function readProfile(bid, callback){
     var self = this;
     var driver = self.driver;
 
-    this.micrios.scheduleCommand(fineOneContact, driver, reset)
+    this.micrios.scheduleCommand(fineOneContact, self, reset, [bid])
         .then(function(){
             var data = {};
             self.driver.sleep(500);
@@ -69,8 +69,11 @@ module.exports = readProfile = function readProfile(bid, callback){
             driver.call(readHeadImgAsync, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read head img');
+                    console.info('[flow]: read profile, Successful');
+                    console.info(data);
                     self.driver.sleep(2000);
-                    self.driver.call(callback, self, null)
+                    self.driver.call(reset, self);
+                    self.driver.call(callback, self, null, data);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read head img');
@@ -110,7 +113,7 @@ function openPanel(){
     var btn = boxItem.findElement({'css': '#chatRoomMembersWrap div.member:nth-child(2)>img'});
     self.driver.sleep(500);
     btn.click().then(function(){console.info('[flow]: read profile, the profile panel is opened');})
-        .thenCatch(function(){
+        .thenCatch(function(e){
             console.error('[flow]: read profile, Failed to click #chatArea>.box_hd');
             return webdriver.promise.rejected(e);
         });
@@ -262,24 +265,61 @@ function readHeadImg(data, callback){
             delete qsJson["type"];
             urlJson.search = qs.stringify(qsJson);
             var formatUrl = url.format(urlJson);
+            var mediaId = codeService.fetch();
+            data.headimgid = mediaId;
             request.get({url: formatUrl, jar: self.j, encoding: null}, function(err, res, body){
+                if(err){
+                    console.error(err);
+                    var e = new Error(err.message);
+                    e.code = MYERROR.FILE_SERVER.code;
+                    throw e;
+                }
                 if(body && body.length){
                     console.info("[flow]: Succeed to upload head img, body  length  "+body.length)
                 }
-                var formData = {file: {value: body, options: {filename: 'xxx.jpg'}}};
+                var formData = {file: {value: body, options: {filename: 'xxx.jpg', mediaId: mediaId}}};
                 request.post({url:fsServer, formData: formData}, function(err, res, body) {
-                    if (err) {
-                        return callback(err, null);
-                    }
-                    try{
-                        var json = JSON.parse(body);
-                    }catch(e){
-                        return callback(e, data);
+                    if(err){
+                        console.error(err);
+                        var e = new Error(err.message);
+                        e.code = MYERROR.FILE_SERVER.code;
+                        throw e;
                     }
                     console.info('[flow]: Succeed to upload the headImg');
-                    data.headimgid = json['media_id'] || "";
-                    callback(json.err, data);
                 });
             })
+            callback(null, data);
         })
 }
+//function readHeadImg(data, callback){
+//    var self = this;
+//    var headEl =  self.driver.findElement({'css': 'div#mmpop_profile>div.profile_mini div.profile_mini_hd img'});
+//    headEl.getAttribute('src')
+//        .then(function(src){
+//            var urlJson = _.pick(url.parse(src), 'protocol', 'slashes', 'host', 'hostname', 'pathname');
+//            var qsJson = qs.parse(url.parse(src).query);
+//            delete qsJson["skey"];
+//            delete qsJson["type"];
+//            urlJson.search = qs.stringify(qsJson);
+//            var formatUrl = url.format(urlJson);
+//            request.get({url: formatUrl, jar: self.j, encoding: null}, function(err, res, body){
+//                if(body && body.length){
+//                    console.info("[flow]: Succeed to upload head img, body  length  "+body.length)
+//                }
+//                var formData = {file: {value: body, options: {filename: 'xxx.jpg'}}};
+//                request.post({url:fsServer, formData: formData}, function(err, res, body) {
+//                    if (err) {
+//                        return callback(err, null);
+//                    }
+//                    try{
+//                        var json = JSON.parse(body);
+//                    }catch(e){
+//                        return callback(e, data);
+//                    }
+//                    console.info('[flow]: Succeed to upload the headImg');
+//                    data.headimgid = json['media_id'] || "";
+//                    callback(json.err, data);
+//                });
+//            })
+//        })
+//}

@@ -16,7 +16,7 @@ module.exports = function(self, item, parentItem, callback){
                         if(msgArr){
                             self.emit('receive', {err: null, data: {msgArr: msgArr}});
                         }
-                        return reset(self, callback);
+                        return reset.call(self, callback);
                     })
                 })
                 .thenCatch(function(e){

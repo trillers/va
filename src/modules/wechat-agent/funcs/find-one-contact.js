@@ -3,10 +3,10 @@ var MYERROR = require('../settings/myerror');
 
 var searchLocator = webdriver.By.className('frm_search');
 
-module.exports = function(){
+module.exports = function(sendTo){
     var self = this;
     var driver = self.driver;
-    var target = self.sendTo;
+    var target = self.sendTo || sendTo;
     var searchItem = driver.findElement(searchLocator);
     searchItem.sendKeys(target);
     driver.call(function(){
@@ -20,10 +20,13 @@ module.exports = function(){
             return webdriver.promise.rejected(new webdriver.error.Error(MYERROR.NO_SUCH_CONTACT.code, MYERROR.NO_SUCH_CONTACT.msg))
         }
         var nickNameEl = item.findElement({'css': 'h4.nickname'});
-        var nickNameTxt = nickNameEl.getText();
+        var nickNameTxt = null;
+        nickNameEl.getText().then(function(nickname){
+            nickNameTxt = nickname;
+        });
         driver.call(function(){
             if(nickNameTxt === target){
-                nickNameEl.click();
+                return nickNameEl.click();
             }
             else if(index === arr.length-1){
                 console.warn('[flow]: user does not exist')
@@ -32,14 +35,11 @@ module.exports = function(){
                 driver.call(function(){
                     return webdriver.promise.rejected(new webdriver.error.Error(MYERROR.NO_RESULT.code, MYERROR.NO_RESULT.msg))
                 });
-            } else {
-                //unknow error
-                console.error('[flow]: process stop error: unknown error');
-                return webdriver.promise.rejected(new webdriver.error.Error(MYERROR.UNKNOWN_ERROR.code, MYERROR.UNKNOWN_ERROR.msg))
             }
         })
     })
     .thenCatch(function(e){
+        console.error(e);
         if(e.code != MYERROR.NO_RESULT.code){
             return console.error(e);
         }

@@ -74,11 +74,8 @@ module.exports = function(callback){
                 });
             driver.sleep(500);
             driver.call(function(){
-                reset(self, function(){
-                    callback(null, {
-                        botid: self.id,
-                        list: groupNameArr
-                    });
+                reset.call(self, function(){
+                    callback(null, groupNameArr);
                 });
             });
         })

@@ -2,12 +2,12 @@ var webdriver = require('selenium-webdriver')
 var profileHelper = require('./read-profile');
 var findOneContact = require('./find-one-contact');
 var reset = require('./reset-pointer');
-var searchLocator = webdriver.By.className('frm_search');
+//var searchLocator = webdriver.By.className('frm_search');
 module.exports = function(nickname, callback){
     var data = {};
     var self = this;
     var driver = self.driver;
-    driver.call(findOneAsync, self)
+    driver.call(findOneContact, self, nickname)
         .then(function(){
             driver.call(profileHelper.openPanel, self)
                 .then(function(){
@@ -54,11 +54,12 @@ module.exports = function(nickname, callback){
                     console.error('[flow]: read profile, Failed to reverse');
                     return webdriver.promise.rejected(e);
                 });
-            driver.call(profileHelper.readHeadImg, self, data)
+            driver.call(profileHelper.readHeadImgAsync, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read Head Img');
                     driver.sleep(2000);
-                    driver.call(callback, self, null);
+                    driver.call(reset, self);
+                    driver.call(callback, self, null, data);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read Head Img');
@@ -66,7 +67,7 @@ module.exports = function(nickname, callback){
                 });
         })
         .thenCatch(function(err){
-            console.warn(e);
+            console.warn(err);
             driver.call(reset, self);
             driver.call(callback, self, err);
         })
