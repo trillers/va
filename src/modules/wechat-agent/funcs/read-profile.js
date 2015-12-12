@@ -20,11 +20,10 @@ module.exports = readProfile = function readProfile(bid, callback){
     this.micrios.scheduleCommand(fineOneContact, self, reset, [bid])
         .then(function(){
             var data = {};
-            self.driver.sleep(500);
             driver.call(openPanel, self)
                 .then(function(){
                     console.info('[flow]: read profile, the profile panel is opened');
-                    return self.driver.sleep(2000);
+                    return self.driver.sleep(200);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to open panel');
@@ -33,7 +32,6 @@ module.exports = readProfile = function readProfile(bid, callback){
             driver.call(readPlace, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read place');
-                    return self.driver.sleep(2000);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read place');
@@ -42,7 +40,6 @@ module.exports = readProfile = function readProfile(bid, callback){
             driver.call(readSex, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read sex');
-                    return self.driver.sleep(2000);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read sex');
@@ -51,7 +48,6 @@ module.exports = readProfile = function readProfile(bid, callback){
             driver.call(readNickname, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read nickname');
-                    return self.driver.sleep(2000);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read nickname');
@@ -60,7 +56,6 @@ module.exports = readProfile = function readProfile(bid, callback){
             driver.call(readRemark, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read remark');
-                    return self.driver.sleep(2000);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read remark');
@@ -71,7 +66,6 @@ module.exports = readProfile = function readProfile(bid, callback){
                     console.info('[flow]: read profile, Succeed to read head img');
                     console.info('[flow]: read profile, Successful');
                     console.info(data);
-                    self.driver.sleep(2000);
                     self.driver.call(reset, self);
                     self.driver.call(callback, self, null, data);
                 })
@@ -267,6 +261,7 @@ function readHeadImg(data, callback){
             var formatUrl = url.format(urlJson);
             var mediaId = codeService.fetch();
             data.headimgid = mediaId;
+            callback(null, data);
             request.get({url: formatUrl, jar: self.j, encoding: null}, function(err, res, body){
                 if(err){
                     console.error(err);
@@ -287,8 +282,7 @@ function readHeadImg(data, callback){
                     }
                     console.info('[flow]: Succeed to upload the headImg');
                 });
-            })
-            callback(null, data);
+            });
         })
 }
 //function readHeadImg(data, callback){

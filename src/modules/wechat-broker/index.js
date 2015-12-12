@@ -9,11 +9,9 @@ var brokerCache = brokerFactory.create(open, {am: true, agent: true});
 module.exports = function(app){
     return brokerCache.then(function(broker){
         app && app.emitter.emit('complete', {serviceName: tempSettings.services.RABBITMQ});
-        var brokerJson = {
+        return {
             brokerAgent: broker.getAgent(),
-            brokerManager: broker.getAgentManager(),
-            //brokerNodeManager: broker.getNodeManager()
+            brokerManager: broker.getAgentManager()
         };
-        return brokerJson;
     })
 };

@@ -1,17 +1,17 @@
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
-var myutil = require('../util/myutil');
+var _ = require('../util/myutil');
 var request = require('request');
 var settings = require('../../app/settings');
 var webdriver = require('selenium-webdriver');
 var createDriver = require('../webdriver/webdriverFactory');
-var TaskQueue = require('l-mq');
 var getBroker = require('../wechat-broker');
 var STATUS = require('./settings/constant').STATUS;
 var CONSTANT = require('./settings/constant');
 var microsFactory = require('../../app/macros');
 var helper = require('./helper');
 var myError = require('./settings/myerror');
+var Promise = require('bluebird');
 
 var reset = require('./funcs/reset-pointer');
 var readProfile = require('./funcs/read-profile');
@@ -25,47 +25,140 @@ var getHostProfile = require('./funcs/get-host-profile');
 function WechatAgent(worker){
     EventEmitter.call(this);
     this.id = worker.id;
-    this.managerId = worker.managerId;
     this.pid = worker.pid;
     this.status = worker.status || STATUS.STARTING;
     this.prevStatus = worker.prevStatus || STATUS.STARTING;
+    this.managerId = worker.managerId;
+    this.driver = null;
+    this.nav = null;
+    this.initialOptions = null;
     this.sendTo = null;
-    this.taskQueue = new TaskQueue(1);
-    this.loggedIn = false;
+    this.loggedIn = worker.loggedIn || false;
     this.callCsToLogin = null;
     this.waitForLogin = null;
     this.baseUrl = "";
-    this.j = request.jar();
+    this.j = (function(){
+        var jar = request.jar();
+        if(worker.j){
+            worker.j.forEach(function(cookie){
+                var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
+                jar.setCookie(requestCookie, settings.wxIndexUrl);
+            });
+        }
+        return  jar;
+    }())
 }
 
 util.inherits(WechatAgent, EventEmitter);
 
 var proto = WechatAgent.prototype;
 
-proto.withDriver = function(driver){
-    if(typeof driver !== 'undefined' && !!driver.instanceOf(webdriver.WebDriver)){
+/**
+ * compose driver
+ * @param driver webdriver.WebDriver
+ * @param opts   Object<{cookie:string}>
+ * @returns {*}
+ */
+proto.withDriver = function(driver, opts){
+    if(driver && !!driver.instanceOf(webdriver.WebDriver)){
         throw new Error('Failed to create agent when with driver, driver type error')
     }
-    this.driver = driver || createDriver();
+    else if(!driver){
+        var self = this;
+        self.driver = createDriver();
+        self.driver.get('https://wx.qq.com');
+        return self.driver.call(function(){
+            if(opts){
+                var options = new webdriver.WebDriver.Options(self.driver);
+                if(opts && opts.cookies && opts.cookies.length>0){
+                    opts.cookies.forEach(function(cookie){
+                        options.addCookie(cookie.key, cookie.value, '/', '.qq.com');
+                    });
+                    new webdriver.WebDriver.Navigation(self.driver).refresh();
+                }
+            }
+        });
+    }
+    else{
+        this.driver = driver
+    }
 };
 
+/**
+ * compose navigator
+ * @param driver     webdriver.WebDriver
+ */
+proto.withNavigator = function(driver){
+    this.nav = new webdriver.WebDriver.Navigation(driver);
+};
+
+/**
+ * get Cookie from wechat, set it to the bot
+ * @returns {Promise<webdriver.promise.Promise>}
+ */
+proto.extractCookies = function(){
+    var self = this;
+    return self.driver.getCurrentUrl().then(function(url){
+        self.baseUrl = url;
+        setCookiesAndPolling();
+    });
+    function setCookiesAndPolling(){
+        self.driver.manage().getCookies().then(function(cookies){
+            cookies.forEach(function(cookie){
+                var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
+                self.j.setCookie(requestCookie, self.baseUrl);
+            });
+        });
+    }
+};
+
+/**
+ * get the bot start
+ * @param options
+ * @param callback
+ */
 proto.start = function(options, callback){
     console.info('[system]: an agent is startup [id]=' + this.id);
     var self = this;
     console.log('[transaction]: begin to start botid=' + self.id);
-    self._login(function(err){
+    self.initialOptions = options;
+    if(self.loggedIn){
+        //pass directly
+        self._restart(function(err){
+            if(!err){
+                self._LoginOrNot(function(err){
+                    if(err){
+                        self._login(loggedInHandler);
+                    }else{
+                        done(callback)
+                    }
+                });
+                return;
+            }
+            console.warn("[flow]: Failed to restart, begin to login");
+            self._login(loggedInHandler);
+        });
+    }
+    else{
+        //login needed
+        self._login(loggedInHandler);
+    }
+    function loggedInHandler(err){
         if(err){
-            console.log(err);
-            return callback(err);
+            console.error("[system]: Failed to login");
+            self.stop().then(function(){
+                return callback(err);
+            }).thenCatch(function(err){
+                return callback(err);
+            })
         }
         if(options.intention === CONSTANT.INTENTION.REGISTER){
             //TODO register
             //pass than emit register event
             //failed than exit
-            return self.driver.call(getHostProfile, self).then(function(profile){
+            self.driver.call(getHostProfile, self).then(function(profile){
                 self.emit('first-profile', {err: null, data: profile});
-                //self.emit('login', {err: null, data: {botid: self.id}});
-                return callback(null, null);
+                return done(callback);
             })
             .thenCatch(function(e){
                 console.error(e);
@@ -81,66 +174,59 @@ proto.start = function(options, callback){
             };
             self.driver.call(getHostProfile, self).then(function(currProfile){
                 if(matchUser(currProfile, oriProfile)){
-                    self._transition(STATUS.LOGGING);
-                    self.emit('login', {err: null, data: {botid: self.id}});
-                    callback(null);
-
+                    done(callback);
                 } else {
                     self.stop().then(function(){
-                        callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
+                        return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
                     })
                 }
             }).thenCatch(function(e){
                 callback(e);
             })
-
         } else {
-            //self.emit('login', {err: null, data: {botid: self.id}});
-            self._transition(STATUS.LOGGING);
-            callback(null);
+            done(callback)
         }
-        function matchUser(currPro, oriPro){
-            var expectRate = 75;
-            myutil.objExclude(currPro, 'botid');
-            var actualRate = myutil.objMatchRate(oriPro, currPro);
-            return actualRate >= expectRate
-        }
-    });
+    }
+    function done(callback){
+        self.loggedIn = true;
+        self.transition(STATUS.LOGGED);
+        self.emit('login', {err: null, data: {botid: self.id}});
+        self.extractCookies().then(function(){callback(null)})
+    }
+    function matchUser(currPro, oriPro){
+        var expectRate = 75;
+        _.objExclude(currPro, 'botid');
+        var actualRate = _.objMatchRate(oriPro, currPro);
+        return actualRate >= expectRate
+    }
+
 };
 
-proto.restart = function(){
+/**
+ * allow bot to stop working
+ * @callback function(Error, null|*)
+ */
+proto.stop = function(callback){
+    var cb = callback ? callback : function(){};
     var self = this;
     return self.driver.close()
         .then(function(){
-            return self.init(self);
+            return self.init(self).then(function(){cb();})
         })
         .thenCatch(function(e){
             console.error('[system]: Failed to stop bot');
-            console.error(e);
-            return self.init(self);
-        })
-        .then(function(){
-            return self.start();
+            //nothing to do...
+            return self.init(self).then(function(){cb(e);})
         })
 };
 
-proto.stop = function(){
-    var self = this;
-    return self.driver.close()
-        .then(function(){
-            return self.init(self);
-        })
-        .thenCatch(function(e){
-            console.error('[system]: Failed to stop bot');
-            console.error(e);
-            return self.init(self);
-        })
-};
-
+/**
+ * initialize bot
+ * @param bot
+ * @returns {*}
+ */
 proto.init = function(bot){
     bot.sendTo = null;
-    bot.driver = createDriver();
-    bot.taskQueue = new TaskQueue(1);
     bot.loggedIn = false;
     if(bot.callCsToLogin){
         bot.callCsToLogin = null;
@@ -154,26 +240,49 @@ proto.init = function(bot){
     return bot.driver.sleep(3000);
 };
 
+/**
+ * send text to a contact
+ * @param json
+ * @param callback
+ */
 proto.sendText = function(json, callback){
     this.micrios = microsFactory();
     this.micrios.scheduleMacros(sendText, this, {sendTo: json.BuId, content: json.Content}, callback);
 };
 
+/**
+ * send image to a contact
+ * @param json
+ * @param callback
+ */
 proto.sendImage = function(json, callback){
     this.micrios = microsFactory();
     this.micrios.scheduleMacros(sendImage, this, {sendTo: json.BuId, content: json.MediaId}, callback);
 };
 
+/**
+ * obtain contact's profile
+ * @param json
+ * @param callback
+ */
 proto.readProfile = function(json, callback){
     this.micrios = microsFactory();
     this.micrios.scheduleMacros(readProfile, this, json.BuId, callback);
 };
 
+/**
+ * obtain all groups's info
+ * @param callback
+ */
 proto.groupList = function(callback){
     this.micrios = microsFactory();
     this.micrios.scheduleMacros(spiderGroupListInfo, this, callback);
 };
 
+/**
+ * obtain all contacts's info
+ * @param callback
+ */
 proto.contactList = function(callback){
     var resultList = null;
     var self = this;
@@ -226,6 +335,183 @@ proto.contactList = function(callback){
         }
     }
 };
+
+/**
+ * check if someone call me
+ * @param callback
+ */
+proto.walkChatList = function(callback){
+    var self = this;
+    self.driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
+        .then(function(collection){
+            var len = collection.length;
+            function iterator(index){
+                var item = collection[index];
+                var iblockTemp = null;
+                item.findElement({'css': 'i.web_wechat_reddot_middle.icon'})
+                    .then(function(iblock){
+                        if(!iblock){
+                            return webdriver.promise.rejected(new webdriver.error.Error(801, 'no_result'))
+                        }
+                        iblockTemp = iblock;
+                        return item.findElement({'css': 'span.nickname_text'})
+                            .then(function(h3El){
+                                return h3El.getText()
+                            })
+                            .then(function(txt){
+                                console.info("[transaction] -receive : a new message received");
+                                console.info("[flow]: the title is " + txt);
+                                return helper.pollingDispatcher(self, txt)(self, iblockTemp, item, callback);
+                            })
+                            .thenCatch(function(e){
+                                console.info("[flow]: walk In dom failed");
+                                console.error(e);
+                                callback(e);
+                            })
+                    })
+                    .thenCatch(function(e){
+                        if(e.code === 7){
+                            index++;
+                            if(index <= (len-1)){
+                                return iterator(index)
+                            }
+                            return callback(null, null);
+                        }
+                        console.error(e);
+                        callback(e);
+                    })
+            }
+            iterator(0);
+        })
+        .thenCatch(function(err){
+            return callback(err);
+        })
+};
+
+/**
+ * check login or not
+ * @param callback
+ * @private
+ */
+proto._LoginOrNot = function(callback){
+    var self = this;
+    var spanEl = self.driver.findElement({css: '.nickname span'});
+    self.driver.sleep(1000);
+    spanEl.getText()
+        .then(function(txt){
+            if(txt != ''){
+                callback(null, null);
+            } else {
+                callback(new Error('LOGIN_FAILED'))
+            }
+        })
+};
+
+/**
+ * notify vn agent status is changed
+ * @param status ?string=< starting, logging, mislogged, logged, exceptional, aborted, exited>
+ */
+proto.transition = function(status){
+    var self = this;
+    self.prevStatus = self.status;
+    self.status = status;
+    getBroker().then(function(broker){
+        broker.brokerAgent.agentStatusChange({
+            NewStatus: self.status,
+            OldStatus: self.prevStatus,
+            CreateTime: (new Date()).getTime(),
+            AgentId: self.id,
+            NodeId: self.managerId
+        })
+    })
+};
+
+/**
+ * allow agent to login
+ * @param callback
+ * @returns {*}
+ * @private
+ */
+proto._restart = function(callback){
+    console.log("[flow]: Begin to restart");
+    var self = this;
+    if(self.j.getCookies(settings.wxIndexUrl).length<=0){
+        return callback(new Error('[flow]: Failed to restart, cookies are lost'))
+    }
+    self.withDriver(null, {cookies: self.j.getCookies(settings.wxIndexUrl)});
+    self.withNavigator(self.driver);
+    self.driver.sleep(3000);
+    self.driver.call(callback, null, null);
+};
+
+/**
+ * allow agent to login
+ * @param callback
+ * @private
+ */
+proto._login = function(callback){
+    var self = this;
+    console.log("[flow]: Begin to login");
+    self.withDriver();
+    self.withNavigator(self.driver);
+    self.driver.call(function(){
+            helper.needLogin(self, function(e){
+                if(e){
+                    return callback(e)
+                }
+            });
+            self.callCsToLogin = setInterval(function(){
+                helper.needLogin(self, function(err){
+                    if(err){
+                        return callback(err)
+                    }
+                });
+            }, settings.callCsToLoginGap);
+            self.waitForLogin = setInterval(function(){
+                self.driver.findElement({css: '.nickname span'})
+                    .then(function(span){
+                        return span.getText()
+                    })
+                    .then(function(txt){
+                        if(!self.loggedIn && txt != ""){
+                            clearInterval(self.waitForLogin);
+                            clearInterval(self.callCsToLogin);
+                            return callback(null);
+                        }
+                    })
+                    .thenCatch(function(e){
+                        console.error("[system]: Failed to wait for login");
+                        clearInterval(self.waitForLogin);
+                        clearInterval(self.callCsToLogin);
+                        return callback(e);
+                    })
+            }, settings.waitForLoginGap);
+        })
+        .thenCatch(function(e){
+            console.error("[system]: Failed to login");
+            return callback(e);
+        });
+};
+
+/**
+ * obtain bot's snapshot of status
+ * @param Promise<Agent>
+ */
+proto.getSnapshot = Promise.promisify(function(callback){
+    var self = this;
+    var fields = ['id', 'pid','status', 'prevStatus', 'managerId', 'initialOptions', 'sendTo', 'loggedIn'];
+    var options = new webdriver.WebDriver.Options(self.driver);
+    options.getCookies()
+        .then(function(cookies){
+            var o = _.deepClone(self);
+            _.objPick.apply(null, [o].concat(fields));
+            o.j = cookies;
+            callback(null, o)
+        })
+        .thenCatch(function(e){
+            callback(e)
+        })
+});
 
 proto.onContactProfile = function(handler){
     var self = this;
@@ -289,142 +575,6 @@ proto.onAddContact = function(handler){
 
 proto.onDisconnect = function(handler){
     this.removeAllListeners('disconnect').on('disconnect', handler);
-};
-
-proto.walkChatList = function(callback){
-    var self = this;
-    self.driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
-        .then(function(collection){
-            var len = collection.length;
-            function iterator(index){
-                var item = collection[index];
-                var iblockTemp = null;
-                item.findElement({'css': 'i.web_wechat_reddot_middle.icon'})
-                    .then(function(iblock){
-                        if(!iblock){
-                            return webdriver.promise.rejected(new webdriver.error.Error(801, 'no_result'))
-                        }
-                        iblockTemp = iblock;
-                        return item.findElement({'css': 'span.nickname_text'})
-                            .then(function(h3El){
-                                return h3El.getText()
-                            })
-                            .then(function(txt){
-                                console.info("[transaction] -receive : a new message received");
-                                console.info("[flow]: the title is " + txt);
-                                return helper.pollingDispatcher(self, txt)(self, iblockTemp, item, callback);
-                            })
-                            .thenCatch(function(e){
-                                console.info("[flow]: walk In dom failed");
-                                console.error(e);
-                                callback(e);
-                            })
-                    })
-                    .thenCatch(function(e){
-                        if(e.code === 7){
-                            index++;
-                            if(index <= (len-1)){
-                                return iterator(index)
-                            }
-                            return callback(null, null);
-                        }
-                        console.error(e);
-                        callback(e);
-                    })
-            }
-            iterator(0);
-        })
-        .thenCatch(function(err){
-            return callback(err);
-        })
-};
-
-proto._LoginOrNot = function(callback){
-    var self = this;
-    self.driver.findElement({css: '.nickname span'})
-        .then(function(span){
-            return span.getText()
-        })
-        .then(function(txt){
-            if(txt != '' && self.loggedIn){
-                return callback(null, null);
-            } else {
-                return webdriver.promise.rejected(new webdriver.error.Error(801, 'no_result'))
-            }
-        })
-        .thenCatch(function(e){
-            console.error(e);
-            callback(e, null);
-        });
-};
-
-proto._transition = function(status){
-    var self = this;
-    self.prevStatus = self.status;
-    self.status = status;
-    getBroker().then(function(broker){
-        broker.brokerAgent.agentStatusChange({
-            NewStatus: self.status,
-            OldStatus: self.prevStatus,
-            CreateTime: (new Date()).getTime(),
-            AgentId: self.id,
-            NodeId: self.managerId
-        })
-    })
-};
-
-proto._login = function(callback){
-    var self = this;
-    console.log("[flow]: Begin to login");
-    self.driver.get(settings.wxIndexUrl)
-        .then(function(){
-            helper.needLogin(self, function(err){
-                if(err){
-                    console.error(err);
-                    return self.stop()
-                        .then(function(){
-                            return self.start();
-                        });
-                }
-            });
-            self.callCsToLogin = setInterval(function(){
-                helper.needLogin(self, function(err){
-                    if(err){
-                        console.error(err);
-                        self.stop()
-                            .then(function(){
-                                return self.start();
-                            });
-                    }
-                });
-            }, settings.callCsToLoginGap);
-            self.waitForLogin = setInterval(function(){
-                self.driver.findElement({css: '.nickname span'})
-                    .then(function(span){
-                        return span.getText()
-                    })
-                    .then(function(txt){
-                        if(!self.loggedIn && txt != ""){
-                            clearInterval(self.waitForLogin);
-                            clearInterval(self.callCsToLogin);
-                            self.loggedIn = true;
-                            callback(null, null);
-                        }
-                    })
-                    .thenCatch(function(e){
-                        console.error("[system]: Failed to wait for login");
-                        console.error(e);
-                        self.stop().then(function(){
-                            self.start();
-                        });
-                    })
-            }, settings.waitForLoginGap);
-        })
-        .thenCatch(function(e){
-            console.error("[system]: Failed to login");
-            console.error(e);
-            callback(e, null);
-        });
 };
 
 module.exports = function(worker){

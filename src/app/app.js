@@ -1,12 +1,13 @@
 var cluster = require('cluster');
 var path = require('path');
-var numCPUs = require('os').cpus.length;
 var wechatManagerFactory = require('../modules/wechat-manager/wechat-manager');
 var net = require('net');
 var getBroker = require('../modules/wechat-broker')
 var managerSettings = require('../modules/wechat-manager/wechat-manager-settings');
 var settings = require('./settings');
 var app = require('./Application')();
+var co = require('co');
+require('../modules/util/codeService');
 
 app.registerService(settings.services.RABBITMQ);
 
@@ -20,25 +21,31 @@ cluster.setupMaster({
 });
 
 //handle uncaughtException to protect process
-process.on('uncaughtException', function(err){ console.error(err.stack); });
+process.on('uncaughtException', function(err){ console.error(err); });
 
-app.start(callback);
+app.start(function(){
+    co(function* (){
+        yield callback();
+    })
+});
 
 //app is startup
-function callback(){
-    console.info('[system]: system is startup');
-    //create a master process, connection never end
-    var server = net.createServer(function(socket) {});
-    server.listen(3000);
+function* callback(){
+    try {
+        console.info('[system]: system is startup');
+        //create a master process, connection never end
+        var server = net.createServer(function (socket) {
+        });
+        server.listen(3000);
+        //build wechat manager
+        wechatManager = wechatManagerFactory({
+            id: settings.id,
+            exceptedAgentSum: settings.max_load
+        });
 
-    //build wechat manager
-    wechatManager = wechatManagerFactory({
-        id: settings.id,
-        payloadNum: settings.max_load
-    });
-
-    //bind vc event listener
-    getBroker().then(function(broker){
+        //bind vc event listener
+        var broker = yield getBroker();
+        wechatManager.broker = broker.brokerManager;
         //agent manager broker init
         broker.brokerManager.init(wechatManager.id);
 
@@ -51,7 +58,7 @@ function callback(){
         });
 
         //continue to heartbeat
-        setInterval(function(){
+        setInterval(function () {
             broker.brokerManager.heartbeat({
                 CreateTime: (new Date()).getTime(),
                 NodeId: wechatManager.id
@@ -60,13 +67,13 @@ function callback(){
 
         /**
          *  msg: {
-         *      CreateTime: Number: Date#getTime() milliseconds
-         *      NodeId: String
-         *      OldStatus: String  reference: 'started' | 'stopped' | 'interrupted'
-         *      NewStatus: String
-         *  }
+     *      CreateTime: Number: Date#getTime() milliseconds
+     *      NodeId: String
+     *      OldStatus: String  reference: 'started' | 'stopped' | 'interrupted'
+     *      NewStatus: String
+     *  }
          */
-        process.on('exit', function(){
+        process.on('exit', function () {
             broker.brokerManager.statusChange({
                 CreateTime: new Date(),
                 NodeId: wechatManager.id,
@@ -77,15 +84,15 @@ function callback(){
 
         /**
          *  msg: {
-         *      CreateTime: Number: Date#getTime() milliseconds
-         *      NodeId: String
-         *      RAM: String
-         *      CPU: String
-         *      ExceptedAgentSum: 预计
-         *      ActualAgentSum: 实际
-         *  }
+     *      CreateTime: Number: Date#getTime() milliseconds
+     *      NodeId: String
+     *      RAM: String
+     *      CPU: String
+     *      ExceptedAgentSum: 预计
+     *      ActualAgentSum: 实际
+     *  }
          */
-        broker.brokerManager.onInfoRequest(function(err, data){
+        broker.brokerManager.onInfoRequest(function (err, data) {
             console.log('[system]: receive a status request event');
             broker.brokerManager.infoResponse({
                 CreateTime: (new Date()).getTime(),
@@ -102,53 +109,59 @@ function callback(){
          *  Message routing: node ---> am
          *
          *  msg: {
-         *      CreateTime: Number: Date#getTime() milliseconds
-         *      NodeId: String
-         *      AgentId: String
-         *      Command: 'start'
-         *      Intention: String 'register' | 'login'
-         *      Mode: 'trusted' | 'untrusted'
-         *      Nickname: String  ONLY applicable if Mode is untrusted
-         *      Sex: 0 1 2        ONLY applicable if Mode is untrusted
-         *      Region:           ONLY applicable if Mode is untrusted
-         *  }
+     *      CreateTime: Number: Date#getTime() milliseconds
+     *      NodeId: String
+     *      AgentId: String
+     *      Command: 'start'
+     *      Intention: String 'register' | 'login'
+     *      Mode: 'trusted' | 'untrusted'
+     *      Nickname: String  ONLY applicable if Mode is untrusted
+     *      Sex: 0 1 2        ONLY applicable if Mode is untrusted
+     *      Region:           ONLY applicable if Mode is untrusted
+     *  }
          *
          *  msg: {
-         *      CreateTime: Number: Date#getTime() milliseconds
-         *      NodeId: String
-         *      AgentId: String
-         *      Command: 'stop'
-         *      Mode: 'graceful' | 'ungraceful'
-         *          graceful means stop until all action messages,
-         *          ungraceful means stop it right now whatever unhandled action messages there.
-         *  }
+     *      CreateTime: Number: Date#getTime() milliseconds
+     *      NodeId: String
+     *      AgentId: String
+     *      Command: 'stop'
+     *      Mode: 'graceful' | 'ungraceful'
+     *          graceful means stop until all action messages,
+     *          ungraceful means stop it right now whatever unhandled action messages there.
+     *  }
          *
          *  msg: {
-         *      CreateTime: Number: Date#getTime() milliseconds
-         *      NodeId: String
-         *      AgentId: String
-         *      Command: 'reload'
-         *      Mode: 'graceful' | 'ungraceful'
-         *          graceful means reload until all action messages,
-         *          ungraceful means reload it right now whatever unhandled action messages there.
-         *  }
+     *      CreateTime: Number: Date#getTime() milliseconds
+     *      NodeId: String
+     *      AgentId: String
+     *      Command: 'reload'
+     *      Mode: 'graceful' | 'ungraceful'
+     *          graceful means reload until all action messages,
+     *          ungraceful means reload it right now whatever unhandled action messages there.
+     *  }
          *
          */
-        broker.brokerManager.onCommand(function(err, data){
-            console.log("***************")
-            console.log(data)
-            if(data.Command === 'start'){
+        broker.brokerManager.onCommand(function (err, data) {
+            if (data.Command === 'start') {
                 wechatManager.spawnWorker({
                     id: data.AgentId,
                     managerId: data.NodeId,
                     intention: data.Intention,
                     mode: data.Mode,
-                    nickname:data.Nickname,
+                    nickname: data.Nickname,
                     sex: data.Sex,
                     region: data.Region
                 });
             }
+            if (data.Command === 'stop') {
+                wechatManager.stop(data.AgentId);
+            }
+            if (data.Command === 'restart') {
+                wechatManager.restart(data.AgentId);
+            }
         }, wechatManager.id);
-    });
+    }catch(e){
+        console.error(e)
+    }
 }
 

@@ -1,6 +1,6 @@
 var Promise = require('bluebird');
 var Service = {};
-var idGen = require('../app/id');
+var idGen = require('../../app/id');
 Service.fetch = function(){
     return idGen.next('WechatBotUser').toId();
 };

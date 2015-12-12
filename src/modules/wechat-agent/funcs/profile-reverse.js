@@ -12,7 +12,7 @@ module.exports = function(nickname, callback){
             driver.call(profileHelper.openPanel, self)
                 .then(function(){
                     console.info('[flow]: read profile, the profile panel is opened');
-                    return driver.sleep(2000);
+                    return driver.sleep(200);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to open panel');
@@ -21,7 +21,6 @@ module.exports = function(nickname, callback){
             driver.call(profileHelper.readPlace, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read place');
-                    return driver.sleep(2000);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read place');
@@ -30,7 +29,6 @@ module.exports = function(nickname, callback){
             driver.call(profileHelper.readSex, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read Sex');
-                    return driver.sleep(2000);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read Sex');
@@ -39,7 +37,6 @@ module.exports = function(nickname, callback){
             driver.call(profileHelper.readNickname, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read Nickname');
-                    return driver.sleep(2000);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read Nickname');
@@ -48,7 +45,7 @@ module.exports = function(nickname, callback){
             driver.call(profileHelper.reverse, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to reverse');
-                    return driver.sleep(2000);
+                    return driver.sleep(200);
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to reverse');
@@ -57,7 +54,6 @@ module.exports = function(nickname, callback){
             driver.call(profileHelper.readHeadImgAsync, self, data)
                 .then(function(){
                     console.info('[flow]: read profile, Succeed to read Head Img');
-                    driver.sleep(2000);
                     driver.call(reset, self);
                     driver.call(callback, self, null, data);
                 })

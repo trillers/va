@@ -1,11 +1,14 @@
 var net = require('net');
 var agentFactory = require('./wechat-agent');
 var server = net.createServer(function(socket) {});
-var worker = null;
+var worker = {};
 var settings = require('./wechat-agent-settings');
 var getBroker = require('../wechat-broker');
+var MYERROR = require('./settings/myerror');
 var CONST = require('vc').enum;
+var STATUS = require('./settings/constant').STATUS;
 var co = require('co');
+var protectorBuilder = require('./wechat-agent-protector');
 
 //connections never end
 server.listen(8000);
@@ -15,17 +18,23 @@ var ipcChannel = {};
 
 ipcChannel['start'] = startHandler;
 ipcChannel['stop'] = stopHandler;
+ipcChannel['snapshot'] = snapshotHandler;
 
 process.on('message', function(cmd) {
     co(function*(){
         yield ipcChannel[cmd.method].apply(null, [cmd.args]);
     })
 });
+//process protector
+process.on('uncaughtException', function(e){
+    console.warn(e);
+});
 
 //def how to handle event from ipc
 function* startHandler(args){
-    try{
+    try {
         worker = agentFactory(args.workerJson);
+        process.on('uncaughtException', protectorBuilder(worker));
         var actionsMap = {
             //one way
             'send-txt': {
@@ -54,10 +63,10 @@ function* startHandler(args){
                 type: 'rr'
             }
         };
-        //def action response
+
         var broker = yield getBroker();
 
-        setInterval(function(){
+        setInterval(function () {
             broker.brokerAgent.heartbeat({
                 CreateTime: (new Date()).getTime(),
                 AgentStatus: worker.status,
@@ -67,8 +76,8 @@ function* startHandler(args){
             });
         }, settings.heartbeatGap);
 
-        worker.onNeedLogin(function(err, data){
-            if(!err){
+        worker.onNeedLogin(function (err, data) {
+            if (!err) {
                 var msg = {
                     CreateTime: (new Date()).getTime(),
                     Action: 'need-login',
@@ -80,8 +89,8 @@ function* startHandler(args){
             }
         });
 
-        worker.onRemarkContact(function(err, data){
-            if(!err){
+        worker.onRemarkContact(function (err, data) {
+            if (!err) {
                 var msg = {
                     CreateTime: (new Date()).getTime(),
                     Action: 'remark-contact',
@@ -94,8 +103,8 @@ function* startHandler(args){
             }
         });
 
-        worker.onFirstProfile(function(err, data){
-            if(!err){
+        worker.onFirstProfile(function (err, data) {
+            if (!err) {
                 var msg = {
                     CreateTime: (new Date()).getTime(),
                     Action: 'first-profile',
@@ -108,8 +117,8 @@ function* startHandler(args){
             }
         });
 
-        worker.onLogin(function(err, data){
-            if(!err){
+        worker.onLogin(function (err, data) {
+            if (!err) {
                 var msg = {
                     CreateTime: (new Date()).getTime(),
                     Action: 'login',
@@ -120,43 +129,44 @@ function* startHandler(args){
             }
         });
 
-        worker.onReceive(function(err, msgArr){
-            if(!err){
+        worker.onReceive(function (err, msgArr) {
+            if (!err) {
                 console.error(err);
                 return;
             }
-            msgArr.forEach(function(msg){
+            msgArr.forEach(function (msg) {
                 broker.brokerAgent.actionIn(msg);
             })
         });
-        worker.withDriver();
-        worker.start(args.options, function(err){
-            if(err){
+
+        worker.start(args.options, function (err) {
+            if (err) {
                 console.error("[system]: Failed to start worker id=" + args.workerJson.id);
                 console.error(err);
-                return;
+                err && err.code && fatalErrFilter(err)
             }
             //TODO begin to polling
             console.log("[system]: agent is logged in, begin to polling id=" + args.workerJson.id);
             broker.brokerAgent.init(worker.id);
 
-            broker.brokerAgent.onActionOut(function(err, data, msg){
+            broker.brokerAgent.onActionOut(function (err, data, msg) {
                 var fn = worker[actionsMap[data.Action].name];
                 var type = actionsMap[data.Action].type;
                 var len = fn.length;
-                if(len > 1){
+                if (len > 1) {
                     fn.call(worker, data, done)
-                }else{
+                } else {
                     fn.call(worker, done)
                 }
-                function done(err, json){
-                    console.error(data.Action + " complete*********");
-                    if(err){
+                function done(err, json) {
+                    if (err) {
+                        err && err.code && fatalErrFilter(err);
+                        //status change
+                        worker.transition(STATUS.EXCEPTIONAL);
                         console.error(err.stack);
-                        return;
                     }
                     data.Data = json;
-                    if(type === 'rr'){
+                    if (type === 'rr') {
                         broker.brokerAgent.actionIn(data);
                     }
                     broker.brokerAgent.finish(msg);
@@ -164,7 +174,7 @@ function* startHandler(args){
                         CreateTime: (new Date()).getTime(),
                         Action: data.Action,
                         AgentId: data.AgentId,
-                        Took: (new Date()).getTime()-data.CreateTime,
+                        Took: (new Date()).getTime() - data.CreateTime,
                         Code: 200,
                         Decs: ''
                     });
@@ -180,12 +190,49 @@ function* startHandler(args){
                 Desc: ''
             });
         });
-    }catch(e){
-        console.error(e.stack);
+    }catch (e){
+        console.error(e)
     }
-
 }
 
-function stopHandler(){
-    //TODO
+function* stopHandler(){
+    try{
+        yield worker.stop();
+        worker.transition(STATUS.EXITED);
+        yield new Promise(function(resolve, reject){
+            setTimeout(function(){
+                process.exit();
+                resolve();
+            }, 2000)
+        })
+    }
+    catch(e){
+        console.log(e.message);
+        e && e.code && fatalErrFilter(e);
+    }
+}
+
+function* snapshotHandler(){
+    var agent = yield worker.getSnapshot();
+    process.send({
+        method: 'snapshot',
+        args: {
+            agent: agent,
+            opts: agent.initialOptions
+        }
+    })
+}
+
+//Helpers
+function fatalErrFilter(err) {
+    worker.transition(STATUS.ABORTED);
+    Object.keys(MYERROR)
+        .filter(function(currErr){
+            return MYERROR[currErr].level == 3
+        })
+        .forEach(function(key){
+            if(MYERROR[key].code == err.code){
+                throw err;
+            }
+        });
 }

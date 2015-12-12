@@ -34,6 +34,13 @@ util.mixin = function(a, b) {
         a[c] = b[c];
     }
 };
+util.mixinLazy = function(a, b){
+    for (var c in b) {
+        if(!a.hasOwnProperty(c)){
+            a[c] = b[c];
+        }
+    }
+};
 util.deepMixin = function(a, b) {
     for (var c in b) {
         var d = util.typeof(b[c]);
@@ -119,6 +126,29 @@ util.isPromise = function(v){
 };
 util.isGenerator = function(fn) {
     return fn.constructor.name === 'GeneratorFunction';
+};
+
+util.arr = {};
+util.arr.remove = function(arr, o){
+    arr.indexOf(o) >= 0 && arr.splice(arr.indexOf(o), 1)
+};
+util.arr.in = function(arr, o){
+    return arr.indexOf(o) >=0;
+};
+util.obj = {};
+util.obj.isEmpty = function(o){
+    return util.typeof(o) && Object.keys(o).length<=0 || false
+};
+util.mapToArr = function(o){
+    if(util.typeof(o) != 'object'){
+        console.error('map convert to arr error');
+        return;
+    }
+    var arr = [];
+    Object.keys(o).forEach(function(key){
+        arr.push(o[key]);
+    });
+    return arr;
 };
 util.noop = function(){};
 

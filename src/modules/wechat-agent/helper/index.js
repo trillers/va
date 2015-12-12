@@ -2,7 +2,6 @@ var waitFor = require('../../util').waitFor;
 var request = require('request');
 var receiveMessageHandler = require('../funcs/receive-message');
 var suggestFriendHandler = require('../funcs/friend-suggest-message');
-var STATUS = require('../settings/constant').STATUS;
 
 var getLoginQr = exports.getLoginQr = function (wcBot, callback){
     var self = wcBot;
@@ -60,15 +59,14 @@ var getLoginQr = exports.getLoginQr = function (wcBot, callback){
         //})
 };
 
-var needLogin = exports.needLogin = function (wcBot, callback){
-    var self = wcBot;
+var needLogin = exports.needLogin = function (bot, callback){
+    var self = bot;
     getLoginQr(self, function(err, data){
         if(err){
             console.error('[flow]: Failed to get Qrcode that used to login');
             callback(err, null);
         }else{
             console.info("[flow]: get login qrcode successful the mediaUrl is [ " + data + " ]");
-            self._transition(STATUS.LOGGING);
             self.emit('needLogin', {err: null, data:{mediaUrl: data, botid: self.id}});
             return callback(null, null);
         }
