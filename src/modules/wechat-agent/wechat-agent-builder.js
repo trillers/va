@@ -9,6 +9,7 @@ var CONST = require('vc').enum;
 var STATUS = require('./settings/constant').STATUS;
 var co = require('co');
 var protectorBuilder = require('./wechat-agent-protector');
+var _ =require('../util/myutil');
 
 //connections never end
 server.listen(8000);
@@ -150,6 +151,9 @@ function* startHandler(args){
             broker.brokerAgent.init(worker.id);
 
             broker.brokerAgent.onActionOut(function (err, data, msg) {
+                if(_.arr.in([STATUS.ABORTED, STATUS.EXITED], worker.status)){
+                    return console.warn('[system]: control flow is already destroyed');
+                }
                 var fn = worker[actionsMap[data.Action].name];
                 var type = actionsMap[data.Action].type;
                 var len = fn.length;

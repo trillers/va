@@ -5,7 +5,8 @@ var CONSTANT = {
         LOGGED: 'logged',
         EXCEPTIONAL: 'exceptional',
         ABORTED: 'aborted',
-        EXITED: 'exited'
+        EXITED: 'exited',
+        MISLOGGED: 'mislogged'
     },
     INTENTION: {
         REGISTER: 'register',

@@ -26,6 +26,7 @@ function WechatAgent(worker){
     EventEmitter.call(this);
     this.id = worker.id;
     this.pid = worker.pid;
+    // enum<logging, mislogged, logged, exceptional, aborted, exited>
     this.status = worker.status || STATUS.STARTING;
     this.prevStatus = worker.prevStatus || STATUS.STARTING;
     this.managerId = worker.managerId;
@@ -66,16 +67,18 @@ proto.withDriver = function(driver, opts){
     else if(!driver){
         var self = this;
         self.driver = createDriver();
-        self.driver.get('https://wx.qq.com');
         return self.driver.call(function(){
             if(opts){
+                self.driver.get('http://pc.qq.com/404');
                 var options = new webdriver.WebDriver.Options(self.driver);
                 if(opts && opts.cookies && opts.cookies.length>0){
                     opts.cookies.forEach(function(cookie){
                         options.addCookie(cookie.key, cookie.value, '/', '.qq.com');
                     });
-                    new webdriver.WebDriver.Navigation(self.driver).refresh();
+                    self.driver.get('https://wx.qq.com');
                 }
+            }else{
+                self.driver.get('https://wx.qq.com');
             }
         });
     }
@@ -147,9 +150,10 @@ proto.start = function(options, callback){
         if(err){
             console.error("[system]: Failed to login");
             self.stop().then(function(){
-                return callback(err);
-            }).thenCatch(function(err){
-                return callback(err);
+                callback()
+            })
+            .thenCatch(function(e){
+                callback(e)
             })
         }
         if(options.intention === CONSTANT.INTENTION.REGISTER){
@@ -176,7 +180,7 @@ proto.start = function(options, callback){
                 if(matchUser(currProfile, oriProfile)){
                     done(callback);
                 } else {
-                    self.stop().then(function(){
+                    self.stop.then(function(){
                         return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
                     })
                 }
@@ -191,7 +195,8 @@ proto.start = function(options, callback){
         self.loggedIn = true;
         self.transition(STATUS.LOGGED);
         self.emit('login', {err: null, data: {botid: self.id}});
-        self.extractCookies().then(function(){callback(null)})
+        self.extractCookies();
+        self.driver.sleep(3000).then(function(){callback(null)})
     }
     function matchUser(currPro, oriPro){
         var expectRate = 75;
@@ -204,21 +209,27 @@ proto.start = function(options, callback){
 
 /**
  * allow bot to stop working
- * @callback function(Error, null|*)
+ * @callback Promise<function(Error, null|*)>
  */
-proto.stop = function(callback){
+proto.stop = Promise.promisify(function(callback){
     var cb = callback ? callback : function(){};
     var self = this;
+    if(_.arr.in([STATUS.ABORTED, STATUS.EXITED], self.status)){
+        return Promise.resolve();
+    }
     return self.driver.close()
         .then(function(){
-            return self.init(self).then(function(){cb();})
+            self.init(self);
+            cb();
+
         })
         .thenCatch(function(e){
-            console.error('[system]: Failed to stop bot');
+            console.warn('[system]: Failed to stop bot');
             //nothing to do...
-            return self.init(self).then(function(){cb(e);})
+            self.init(self);
+            cb(e);
         })
-};
+});
 
 /**
  * initialize bot
@@ -237,7 +248,6 @@ proto.init = function(bot){
         bot.waitForLogin = null;
     }
     bot.emit('abort', {err: null, data: {botid: bot.id}});
-    return bot.driver.sleep(3000);
 };
 
 /**
@@ -452,6 +462,7 @@ proto._restart = function(callback){
 proto._login = function(callback){
     var self = this;
     console.log("[flow]: Begin to login");
+    self.transition(STATUS.LOGGING);
     self.withDriver();
     self.withNavigator(self.driver);
     self.driver.call(function(){
@@ -461,6 +472,7 @@ proto._login = function(callback){
                 }
             });
             self.callCsToLogin = setInterval(function(){
+                self.transition(STATUS.MISLOGGED);
                 helper.needLogin(self, function(err){
                     if(err){
                         return callback(err)
