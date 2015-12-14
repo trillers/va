@@ -1,2 +1,1 @@
-var _ =require('../../src/modules/util/myutil');
-console.log(_.arr.in([111, 222, 333], 121))
+console.log(1450124621/1000/3600/24)

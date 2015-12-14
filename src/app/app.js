@@ -143,7 +143,7 @@ function* callback(){
          */
         broker.brokerManager.onCommand(function (err, data) {
             if (data.Command === 'start') {
-                wechatManager.spawnWorker({
+                var agent = {
                     id: data.AgentId,
                     managerId: data.NodeId,
                     intention: data.Intention,
@@ -151,7 +151,9 @@ function* callback(){
                     nickname: data.Nickname,
                     sex: data.Sex,
                     region: data.Region
-                });
+                };
+                if(data.Cookies) agent.j = data.Cookies;
+                wechatManager.spawnWorker(agent);
             }
             if (data.Command === 'stop') {
                 wechatManager.stop(data.AgentId);

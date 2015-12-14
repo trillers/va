@@ -27,14 +27,14 @@ process.on('message', function(cmd) {
     })
 });
 //process protector
-process.on('uncaughtException', function(e){
-    console.warn(e);
-});
+process.on('uncaughtException', noop);
+function noop(e){console.error(e)}
 
 //def how to handle event from ipc
 function* startHandler(args){
     try {
         worker = agentFactory(args.workerJson);
+        process.removeListener('uncaughtException', noop);
         process.on('uncaughtException', protectorBuilder(worker));
         var actionsMap = {
             //one way
@@ -61,6 +61,10 @@ function* startHandler(args){
             },
             'sync-groups': {
                 name: 'groupList',
+                type: 'rr'
+            },
+            'cookies-request': {
+                name: 'getCookies',
                 type: 'rr'
             }
         };
@@ -167,7 +171,6 @@ function* startHandler(args){
                         err && err.code && fatalErrFilter(err);
                         //status change
                         worker.transition(STATUS.EXCEPTIONAL);
-                        console.error(err.stack);
                     }
                     data.Data = json;
                     if (type === 'rr') {

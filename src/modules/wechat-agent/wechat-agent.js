@@ -40,7 +40,7 @@ function WechatAgent(worker){
     this.baseUrl = "";
     this.j = (function(){
         var jar = request.jar();
-        if(worker.j){
+        if(worker.j && worker.j.length > 0){
             worker.j.forEach(function(cookie){
                 var requestCookie = request.cookie(cookie.name + '=' + cookie.value);
                 jar.setCookie(requestCookie, settings.wxIndexUrl);
@@ -75,15 +75,18 @@ proto.withDriver = function(driver, opts){
                     opts.cookies.forEach(function(cookie){
                         options.addCookie(cookie.key, cookie.value, '/', '.qq.com');
                     });
-                    self.driver.get('https://wx.qq.com');
                 }
+                //no cookies
+                self.driver.get('https://wx.qq.com');
             }else{
+                //no options
                 self.driver.get('https://wx.qq.com');
             }
         });
     }
     else{
-        this.driver = driver
+        this.driver = driver;
+        return driver.sleep(200);
     }
 };
 
@@ -147,12 +150,15 @@ proto.start = function(options, callback){
         self._login(loggedInHandler);
     }
     function loggedInHandler(err){
+        clearInterval(self.waitForLogin);
+        clearInterval(self.callCsToLogin);
         if(err){
             console.error("[system]: Failed to login");
-            self.stop().then(function(){
+            self.stop()
+            .then(function(){
                 callback()
             })
-            .thenCatch(function(e){
+            .catch(function(e){
                 callback(e)
             })
         }
@@ -403,7 +409,7 @@ proto.walkChatList = function(callback){
  * @param callback
  * @private
  */
-proto._LoginOrNot = function(callback){
+proto._LoginOrNot = Promise.promisify(function(callback){
     var self = this;
     var spanEl = self.driver.findElement({css: '.nickname span'});
     self.driver.sleep(1000);
@@ -415,7 +421,7 @@ proto._LoginOrNot = function(callback){
                 callback(new Error('LOGIN_FAILED'))
             }
         })
-};
+});
 
 /**
  * notify vn agent status is changed
@@ -463,46 +469,61 @@ proto._login = function(callback){
     var self = this;
     console.log("[flow]: Begin to login");
     self.transition(STATUS.LOGGING);
-    self.withDriver();
+    self.withDriver(null, {cookies: self.j.getCookies(settings.wxIndexUrl)});
     self.withNavigator(self.driver);
-    self.driver.call(function(){
-            helper.needLogin(self, function(e){
-                if(e){
-                    return callback(e)
+    self.driver.sleep(500);
+    self.driver.call(self._LoginOrNot, self)
+        .then(function(){
+            //cookies available
+            callback(null);
+        })
+        .thenCatch(function(){
+            //cookies become invalid
+            console.warn('[flow]: cookie become invalid');
+            self.driver.call(waitForLogin, null)
+                .thenCatch(function(e){
+                    console.error("[system]: Failed to login");
+                    return callback(e);
+                });
+        });
+    function waitForLogin(){
+        helper.needLogin(self, function(e){
+            if(e){
+                return callback(e)
+            }
+        });
+        self.callCsToLogin = setInterval(function(){
+            self.transition(STATUS.MISLOGGED);
+            helper.needLogin(self, function(err){
+                if(err){
+                    return callback(err)
                 }
             });
-            self.callCsToLogin = setInterval(function(){
-                self.transition(STATUS.MISLOGGED);
-                helper.needLogin(self, function(err){
-                    if(err){
-                        return callback(err)
+        }, settings.callCsToLoginGap);
+        self.waitForLogin = setInterval(function(){
+            self.driver.findElement({css: '.nickname span'})
+                .then(function(span){
+                    return span.getText()
+                })
+                .then(function(txt){
+                    if(!self.loggedIn && txt != ""){
+                        return callback(null);
                     }
-                });
-            }, settings.callCsToLoginGap);
-            self.waitForLogin = setInterval(function(){
-                self.driver.findElement({css: '.nickname span'})
-                    .then(function(span){
-                        return span.getText()
-                    })
-                    .then(function(txt){
-                        if(!self.loggedIn && txt != ""){
-                            clearInterval(self.waitForLogin);
-                            clearInterval(self.callCsToLogin);
-                            return callback(null);
-                        }
-                    })
-                    .thenCatch(function(e){
-                        console.error("[system]: Failed to wait for login");
-                        clearInterval(self.waitForLogin);
-                        clearInterval(self.callCsToLogin);
-                        return callback(e);
-                    })
-            }, settings.waitForLoginGap);
-        })
-        .thenCatch(function(e){
-            console.error("[system]: Failed to login");
-            return callback(e);
-        });
+                })
+                .thenCatch(function(e){
+                    console.error("[system]: Failed to wait for login");
+                    return callback(e);
+                })
+        }, settings.waitForLoginGap);
+    }
+};
+
+proto.getCookies = function(callback){
+    this.getSnapshot().then(function(o){
+        callback(null, o.j);
+    }).catch(function(e){
+        callback(e)
+    })
 };
 
 /**
