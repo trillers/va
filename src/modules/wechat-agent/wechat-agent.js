@@ -432,13 +432,15 @@ proto.transition = function(status){
     self.prevStatus = self.status;
     self.status = status;
     getBroker().then(function(broker){
-        broker.brokerAgent.agentStatusChange({
+        var msg = {
             NewStatus: self.status,
             OldStatus: self.prevStatus,
             CreateTime: (new Date()).getTime(),
             AgentId: self.id,
             NodeId: self.managerId
-        })
+        };
+        broker.brokerAgent.agentStatusChange(msg);
+        broker.brokerAgent.botStatusChange(msg);
     })
 };
 
