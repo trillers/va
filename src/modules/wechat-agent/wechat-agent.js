@@ -178,8 +178,8 @@ proto.start = function(options, callback){
         //mode trusted | untrusted
         if(options.mode === CONSTANT.MODE.UNTRUSTED){
             var oriProfile = {
-                nickname: options.Nickname,
-                sex: options.Sex
+                nickname: options.nickname,
+                sex: options.sex
             };
             self.driver.call(getHostProfile, self).then(function(currProfile){
                 if(matchUser(currProfile, oriProfile)){
