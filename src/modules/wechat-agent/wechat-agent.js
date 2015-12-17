@@ -214,27 +214,27 @@ proto.start = function(options, callback){
 
 /**
  * allow bot to stop working
- * @callback Promise<function(Error, null|*)>
+ * @callback Promise
  */
-proto.stop = Promise.promisify(function stop(callback){
-    var cb = callback ? callback : function(){};
+proto.stop = function(){
     var self = this;
-    if(_.arr.in([STATUS.ABORTED, STATUS.EXITED], self.status)){
-        return cb(null);
-    }
-    return self.driver.close()
-        .then(function(){
-            self.init(self);
-            cb(null);
-
-        })
-        .thenCatch(function(e){
-            console.warn('[system]: Failed to stop bot');
-            //nothing to do...
-            self.init(self);
-            cb(e);
-        })
-});
+    return new Promise(function(resolve, reject){
+        if(_.arr.in([STATUS.ABORTED, STATUS.EXITED], self.status)){
+            return resolve();
+        }
+        return self.driver.close()
+            .then(function(){
+                self.init(self);
+                return resolve();
+            })
+            .thenCatch(function(e){
+                console.warn('[system]: Failed to stop bot');
+                //nothing to do...
+                self.init(self);
+                return reject(e);
+            })
+    });
+};
 
 /**
  * initialize bot

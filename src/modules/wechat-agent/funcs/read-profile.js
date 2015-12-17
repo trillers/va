@@ -272,7 +272,7 @@ function readHeadImg(data, callback){
                 if(body && body.length){
                     console.info("[flow]: Succeed to upload head img, body  length  "+body.length)
                 }
-                var formData = {file: {value: body, options: {filename: 'xxx.jpg', mediaId: mediaId}}};
+                var formData = {mediaId: mediaId, file: {value: body, options: {filename: 'xxx.jpg'}}};
                 request.post({url:fsServer, formData: formData}, function(err, res, body) {
                     if(err){
                         console.error(err);

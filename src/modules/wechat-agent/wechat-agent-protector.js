@@ -1,4 +1,5 @@
 var broker = require('../wechat-broker');
+var STATUS = require('./settings/constant').STATUS;
 
 module.exports = function(worker){
     return function(err){
