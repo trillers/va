@@ -36,7 +36,7 @@ module.exports ={
     },
     NO_SUCH_WINDOW: {
         code:23,
-        msg: 'the current user is not host',
+        msg: 'window had been closed rudely',
         level: 3
     }
 };

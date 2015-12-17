@@ -147,8 +147,8 @@ function* startHandler(args){
         worker.start(args.options, function (err) {
             if (err) {
                 console.error("[system]: Failed to start worker id=" + args.workerJson.id);
+                err && err.code && fatalErrFilter(err);
                 console.error(err);
-                err && err.code && fatalErrFilter(err)
             }
             //TODO begin to polling
             console.log("[system]: agent is logged in, begin to polling id=" + args.workerJson.id);
@@ -197,6 +197,7 @@ function* startHandler(args){
                 Desc: ''
             });
         });
+
     }catch (e){
         console.error(e)
     }
@@ -232,7 +233,6 @@ function* snapshotHandler(){
 
 //Helpers
 function fatalErrFilter(err) {
-    worker.transition(STATUS.ABORTED);
     Object.keys(MYERROR)
         .filter(function(currErr){
             return MYERROR[currErr].level == 3

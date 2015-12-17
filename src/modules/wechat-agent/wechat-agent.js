@@ -156,7 +156,7 @@ proto.start = function(options, callback){
             console.error("[system]: Failed to login");
             self.stop()
             .then(function(){
-                callback()
+                callback(null)
             })
             .catch(function(e){
                 callback(e)
@@ -172,7 +172,7 @@ proto.start = function(options, callback){
             })
             .thenCatch(function(e){
                 console.error(e);
-                return callback(e, null);
+                return callback(e);
             })
         }
         //mode trusted | untrusted
@@ -519,6 +519,10 @@ proto._login = function(callback){
     }
 };
 
+/**
+ * Extract cookies from web page then return them
+ * @param callback function((Error, Array<{Cookies}>))
+ */
 proto.getCookies = function(callback){
     this.getSnapshot().then(function(o){
         callback(null, o.j);
