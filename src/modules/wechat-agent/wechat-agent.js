@@ -185,6 +185,10 @@ proto.start = function(options, callback){
                 if(matchUser(currProfile, oriProfile)){
                     done(callback);
                 } else {
+                    console.warn('check stop in bot or not');
+                    console.warn('stop' in self);
+                    console.warn('check stop return a Promise or not');
+                    console.warn(typeof self.stop() === Promise);
                     self.stop.then(function(){
                         return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
                     })
@@ -206,6 +210,9 @@ proto.start = function(options, callback){
     function matchUser(currPro, oriPro){
         var expectRate = 50;
         _.objPick(currPro, 'nickname', 'sex');
+        console.warn('check match user');
+        console.log(currPro);
+        console.log(oriPro);
         var actualRate = _.objMatchRate(oriPro, currPro);
         return actualRate >= expectRate
     }
