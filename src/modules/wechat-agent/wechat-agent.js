@@ -179,8 +179,7 @@ proto.start = function(options, callback){
         if(options.mode === CONSTANT.MODE.UNTRUSTED){
             var oriProfile = {
                 nickname: options.Nickname,
-                sex: options.Sex,
-                place: options.Region
+                sex: options.Sex
             };
             self.driver.call(getHostProfile, self).then(function(currProfile){
                 if(matchUser(currProfile, oriProfile)){
@@ -205,7 +204,7 @@ proto.start = function(options, callback){
         self.driver.sleep(3000).then(function(){callback(null)})
     }
     function matchUser(currPro, oriPro){
-        var expectRate = 75;
+        var expectRate = 50;
         _.objExclude(currPro, 'botid');
         var actualRate = _.objMatchRate(oriPro, currPro);
         return actualRate >= expectRate
@@ -217,16 +216,16 @@ proto.start = function(options, callback){
  * allow bot to stop working
  * @callback Promise<function(Error, null|*)>
  */
-proto.stop = Promise.promisify(function(callback){
+proto.stop = Promise.promisify(function stop(callback){
     var cb = callback ? callback : function(){};
     var self = this;
     if(_.arr.in([STATUS.ABORTED, STATUS.EXITED], self.status)){
-        return Promise.resolve();
+        return cb(null);
     }
     return self.driver.close()
         .then(function(){
             self.init(self);
-            cb();
+            cb(null);
 
         })
         .thenCatch(function(e){
