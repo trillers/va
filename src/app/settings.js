@@ -1,9 +1,8 @@
-var settings = require('athena-settings');
 var va_settings = require('va-settings');
 
 var reconnectTime = 12*60*60*1000;
 
-var fsUrl = settings.api.url + '/file/upload';
+var fsUrl = va_settings.api.url + '/file/upload';
 
 var wxIndexUrl = 'https://wx.qq.com';
 
