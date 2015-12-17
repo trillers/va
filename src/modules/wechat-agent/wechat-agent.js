@@ -187,8 +187,6 @@ proto.start = function(options, callback){
                 } else {
                     console.warn('check stop in bot or not');
                     console.warn('stop' in self);
-                    console.warn('check stop return a Promise or not');
-                    console.warn(self.stop() instanceof Promise);
                     self.stop().then(function(){
                         return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
                     })
@@ -214,6 +212,7 @@ proto.start = function(options, callback){
         console.log(currPro);
         console.log(oriPro);
         var actualRate = _.objMatchRate(oriPro, currPro);
+        console.warn('[flow]: match rate is ' + actualRate);
         return actualRate >= expectRate
     }
 
