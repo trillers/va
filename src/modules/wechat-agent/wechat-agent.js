@@ -188,7 +188,7 @@ proto.start = function(options, callback){
                     console.warn('check stop in bot or not');
                     console.warn('stop' in self);
                     console.warn('check stop return a Promise or not');
-                    console.warn(typeof self.stop() === Promise);
+                    console.warn(self.stop() instanceof Promise);
                     self.stop.then(function(){
                         return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
                     })

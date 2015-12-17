@@ -1,15 +1,7 @@
 var Promise = require('bluebird')
-function A(){
+function test(){
+    return new Promise(function(){
 
-}
-var pro = A.prototype;
-pro.stop = Promise.promisify(function(callback){
-    setTimeout(function(){
-        callback();
     })
-});
-
-var a = new A();
-a.stop().then(function(){
-    console.log('ok')
-});
+}
+console.log(test() instanceof Promise)
