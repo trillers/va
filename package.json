@@ -18,7 +18,9 @@
     "amqplib": "0.4.0",
     "log4js": "0.6.26",
     "request": "2.61.0",
-    "underscore": "1.8.3"
+    "underscore": "1.8.3",
+    "redis": "0.12.1",
+    "redis-sentinel": "0.3.3"
   },
   "devDependencies": {
     "mocha": "2.1.0",

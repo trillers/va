@@ -6,7 +6,7 @@ var source = {
 };
 
 //build webdriver proxy
-require('./proxy/shareIO')(webdriver, source, {shareIO: true});
+//require('./proxy/shareIO')(webdriver, source, {shareIO: true});
 
 module.exports = function createDriver(opts){
     var chromeCapabilities = webdriver.Capabilities.chrome();

@@ -1,4 +1,4 @@
-var settings = require('athena-settings').redis;
+var settings = require('base-settings').redis;
 var logger = require('./logging').logger;
 var redis = require('redis');
 var sentinel = require('redis-sentinel');
