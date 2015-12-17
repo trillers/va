@@ -205,7 +205,7 @@ proto.start = function(options, callback){
     }
     function matchUser(currPro, oriPro){
         var expectRate = 50;
-        _.objExclude(currPro, 'botid');
+        _.objPick(currPro, 'nickname', 'sex');
         var actualRate = _.objMatchRate(oriPro, currPro);
         return actualRate >= expectRate
     }
