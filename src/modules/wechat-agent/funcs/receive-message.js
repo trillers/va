@@ -3,6 +3,7 @@ var request = require('request');
 var reset = require('./reset-pointer');
 var fsServer = require('../../../app/settings').fsUrl;
 var webdriver = require('selenium-webdriver');
+var codeGen = require('../../util/codeService');
 
 module.exports = function(self, item, parentItem, callback){
     item.getText()
@@ -143,8 +144,7 @@ function spiderContent(self, unReadCount, callback){
                                     if(err){
                                         return callback(err, null)
                                     }
-                                    msg['MediaId'] = res['wx_media_id'];
-                                    msg['FsMediaId'] = res['media_id'];
+                                    msg['MediaId'] = res['mediaId'];
                                     msg['MsgType'] = 'image';
                                     callback(null, msg);
                                 })
@@ -162,8 +162,7 @@ function spiderContent(self, unReadCount, callback){
                                     if(err){
                                         return callback(err, null)
                                     }
-                                    msg['MediaId'] = res['wx_media_id'];
-                                    msg['FsMediaId'] = res['media_id'];
+                                    msg['MediaId'] = res['mediaId'];
                                     msg['MsgType'] = 'voice';
                                     callback(null, msg);
                                 });
@@ -186,6 +185,8 @@ function spiderContent(self, unReadCount, callback){
                 return url;
             }
             function getMediaFile(url, fileType, callback){
+                var mediaId = codeGen.fetch();
+                callback(null, {mediaId: mediaId});
                 console.info("[flow]: file url is " + url);
                 var formData = {
                     file: {
@@ -197,18 +198,19 @@ function spiderContent(self, unReadCount, callback){
                 };
                 request.post({url:fsServer, formData: formData}, function(err, res, body) {
                     if (err) {
-                        return callback(err, null);
+                        console.error('[flow]: Failed to upload file');
+                        console.error(err)
                     }
                     try{
                         var json = JSON.parse(body);
                     }catch(e){
                         console.error("[flow]: -receive message - Failed to parse json from file server");
-                        return callback(e);
+                        return console.error(e);
                     }
                     if(json.err){
-                        return callback(json.err, null);
+                        console.error('[flow]: Failed to upload file');
+                        console.error(err)
                     }
-                    callback(null, json);
                 });
             }
         });
