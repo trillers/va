@@ -284,7 +284,7 @@ proto.sendImage = function(json, callback){
 /**
  * obtain contact's profile
  * @param json
- * @param callback
+ * @param callback(Error, Object<{headimgid, bid, nickname, sex, place, botid}>)
  */
 proto.readProfile = function(json, callback){
     this.micrios = microsFactory();
