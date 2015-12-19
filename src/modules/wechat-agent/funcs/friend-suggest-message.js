@@ -51,7 +51,7 @@ module.exports = function(self, item, parentItem, callback){
             .then(function(profile){
                 console.info("[flow]:the contact has been added, the profile is****");
                 console.info(profile);
-                self.emit('contactAdded', {err: null, data: {botid: self.id, bid: profile.code, nickname: profile.nickName}});
+                self.emit('contactAdded', {err: null, data: {botid: self.id, remark: profile.code, nickname: profile.nickName}});
             })
             .thenCatch(function(e){
                 console.error('[flow]: error occur - add one user');

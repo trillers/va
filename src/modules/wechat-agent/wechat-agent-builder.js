@@ -100,7 +100,7 @@ function* startHandler(args){
                     CreateTime: (new Date()).getTime(),
                     Action: 'remark-contact',
                     AgentId: worker.id,
-                    Contact: data
+                    Data: data
                 };
                 console.info("send vk a first contact event********");
                 console.info(msg);
@@ -114,7 +114,7 @@ function* startHandler(args){
                     CreateTime: (new Date()).getTime(),
                     Action: 'first-profile',
                     AgentId: worker.id,
-                    Profile: data
+                    Data: data
                 };
                 console.info("send vk a first profile event********");
                 console.info(msg);
@@ -170,7 +170,7 @@ function* startHandler(args){
                     if (err) {
                         err && err.code && fatalErrFilter(err);
                         //status change
-                        worker.transition(STATUS.EXCEPTIONAL);
+                        //worker.transition(STATUS.EXCEPTIONAL);
                     }
                     data.Data = json;
                     if (type === 'rr') {

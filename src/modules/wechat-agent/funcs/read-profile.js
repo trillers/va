@@ -55,7 +55,13 @@ module.exports = readProfile = function readProfile(bid, callback){
                 });
             driver.call(readRemark, self, data)
                 .then(function(){
+                    console.log("$$$$$$$$$$$$$$$$$");
+                    console.log(data);
                     console.info('[flow]: read profile, Succeed to read remark');
+                    if(data.remark == ''){
+                        data.remark = data.nickname;
+                        driver.call(remark, self, data);
+                    }
                 })
                 .thenCatch(function(e){
                     console.error('[flow]: read profile, Failed to read remark');
@@ -92,26 +98,24 @@ module.exports.readHeadImgAsync = readHeadImgAsync;
 
 function openPanel(){
     var self = this;
-    self.driver.sleep(500);
     var boxItem = self.driver.findElement({'css': '#chatArea>.box_hd'});
     boxItem.findElement({'css': 'div.title_wrap>div.title.poi'}).click()
         .thenCatch(function(e){
             console.error('[flow]: read profile, Failed to click #chatArea>.box_hd');
             return webdriver.promise.rejected(e);
         });
-    self.driver.wait(webdriver.until.elementLocated(webdriver.By.css('#chatRoomMembersWrap div.member:nth-child(2)>img')), 5000)
+    self.driver.wait(webdriver.until.elementLocated(webdriver.By.css('#chatRoomMembersWrap div.member:nth-child(2)>img')), 2000)
         .thenCatch(function(e){
             console.error('[flow]: read profile, Failed to Wait for Element -> #chatArea>.box_hd');
             return webdriver.promise.rejected(e);
         });
     var btn = boxItem.findElement({'css': '#chatRoomMembersWrap div.member:nth-child(2)>img'});
-    self.driver.sleep(500);
     btn.click().then(function(){console.info('[flow]: read profile, the profile panel is opened');})
         .thenCatch(function(e){
             console.error('[flow]: read profile, Failed to click #chatArea>.box_hd');
             return webdriver.promise.rejected(e);
         });
-    return self.driver.sleep(2000)
+    return self.driver.sleep(1000)
 }
 
 function reverse(data){
@@ -128,7 +132,7 @@ function reverse(data){
             console.error('[flow]: read profile, Failed to clear input -> #chatArea>.box_hd');
             return webdriver.promise.rejected(e);
         });
-    self.driver.sleep(500);
+    self.driver.sleep(200);
     self.driver.executeScript('window.document.querySelector("div.meta_area p[contenteditable]").blur();')
         .thenCatch(function(){
             console.error('[flow]: read profile, Failed to blur input -> div.meta_area p[contenteditable]');
@@ -136,7 +140,7 @@ function reverse(data){
         });
     self.driver.findElement({css: '#mmpop_profile .avatar .img'}).click()
         .then(function () {
-            data.bid = data.nickname;
+            data.remark = data.nickname;
             console.log("[flow]:clear remark ok");
         })
         .thenCatch(function(){
@@ -157,15 +161,13 @@ function remark(data){
         });
     self.driver.executeScript('window.document.querySelector("div.meta_area p[contenteditable]").innerText = "";')
         .then(function () {
-            var code = codeService.fetch();
-            data.bid = code;
-            return itemEl.sendKeys(code)
+            return itemEl.sendKeys(data.remark);
         })
         .thenCatch(function(){
             console.error('[flow]: read profile, Failed to execute script clear div.meta_area p[contenteditable]');
             return webdriver.promise.rejected(e);
         });
-    self.driver.sleep(500);
+    self.driver.sleep(200);
     self.driver.executeScript('window.document.querySelector("div.meta_area p[contenteditable]").blur();')
         .thenCatch(function(){
             console.error('[flow]: read profile, Failed to execute script blur div.meta_area p[contenteditable]');
@@ -174,7 +176,7 @@ function remark(data){
     self.driver.findElement({css: '#mmpop_profile .avatar .img'}).click()
         .then(function () {
             console.log("[flow]: read profile, modify remark ok");
-            return self.driver.sleep(1000)
+            return self.driver.sleep(200)
         })
         .thenCatch(function(){
             console.error('[flow]: read profile, Failed to click img -> #mmpop_profile .avatar .img]');
@@ -239,12 +241,14 @@ function readRemark(data){
     var remarkEl =  self.driver.findElement({'css': 'div#mmpop_profile>div.profile_mini div.profile_mini_bd>div.meta_area>div.meta_item:nth-child(1) p'});
     remarkEl.getText()
         .then(function(bidtxt){
-            if(bidtxt === '点击修改备注' || 'Click to edit alias'){
+            console.log('*********************');
+            console.log(bidtxt)
+            if(bidtxt === '点击修改备注' || bidtxt === 'Click to edit alias'){
                 console.info('[flow]: remark is empty');
-                return data.bid = data.nickname;
+                return data.remark = '';
             }
             console.info('[flow]: remark is ' + data.nickname);
-            return data.bid = bidtxt;
+            return data.remark = bidtxt;
         })
 }
 

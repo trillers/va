@@ -1,3 +1,4 @@
+'use strict';
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var _ = require('../util/myutil');
@@ -284,7 +285,7 @@ proto.sendImage = function(json, callback){
 /**
  * obtain contact's profile
  * @param json
- * @param callback(Error, Object<{headimgid, bid, nickname, sex, place, botid}>)
+ * @param callback(Error, Object<{headimgid, remark, nickname, sex, place, botid}>)
  */
 proto.readProfile = function(json, callback){
     this.micrios = microsFactory();
@@ -319,35 +320,27 @@ proto.contactList = function(callback){
             if(err){
                 //TODO
             }
-            list.forEach(function(contact){
+            for(let i=0,len=list.length; i<len; i++){
+                let contact = list[i];
                 //read his profile, and send a remark contact event
                 if(contact.nickname.substr(0, 3) != 'bu-'){
-                    readProfile.call(self, contact.nickname, function(err, data){
-                        if(err){
-                            console.log("[flow]: contact list, Failed to get contact list");
-                            console.warn(err);
-                            return callback(err)
-                        }else{
-                            checkDone(list);
-                            self.emit('remarkcontact', {err: null, data: data})
-                        }
-                    });
+                    self.micrios.scheduleMacros(readProfile, self, contact.nickname, eachCallback);
                 }
                 //clear the bu- remark, and send a remark contact event
                 else{
-                    reverseProfileAsync.call(self, contact.nickname, function(err, data){
-                        if(err){
-                            console.log("[flow]: contact list, Failed to remark contact");
-                            console.warn(err);
-                            return callback(err)
-                        }else{
-                            checkDone(list);
-                            self.emit('remarkcontact', {err: null, data: data})
-                        }
-                    });
+                    self.micrios.scheduleMacros(reverseProfileAsync, self, contact.nickname, eachCallback);
                 }
-            });
+            }
         });
+        function eachCallback(err, data){
+            if (err) {
+                console.log("[flow]: contact list, Failed to get contact list");
+                console.warn(err);
+            }else{
+                self.emit('remarkcontact', {err: null, data: data});
+            }
+            checkDone(list);
+        }
     }
     function checkDone(list){
         doneIndex++;
