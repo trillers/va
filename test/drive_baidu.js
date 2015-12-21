@@ -13,5 +13,5 @@ var driver =  new webdriver.Builder()
 
 driver.call(function(){console.info('start to request baidu')});
 driver.get('https://www.baidu.com');
-driver.getTitle.then(function(title){ console.info('test successful, title is ' + title)});
+driver.getTitle().then(function(title){ console.info('test successful, title is ' + title)});
 driver.quit();

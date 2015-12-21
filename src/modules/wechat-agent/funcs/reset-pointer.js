@@ -9,21 +9,22 @@ module.exports = function(callback){
     var searchItem = driver.findElement(searchLocator);
     searchItem.clear();
     driver.findElement(nameLocator).click();
-    var titleEL = driver.findElement(webdriver.By.className('title_name'));
-    return titleEL.getText()
-        .then(function(title){
-            if(title != settings.RESET_TITLE){
-                var resetEl = driver.findElement(receiveRestLocator);
-                resetEl.click();
-                if(callback){
-                    driver.call(callback, null, null);
-                }
-            }
-        })
-        .thenCatch(function(err){
-            console.error("[system]: Failed to reset in list [code]-------");
-            console.error(err);
-            if (callback) callback(err)
-            //TODO -- serious error
-        })
+    callback && driver.call(callback, null, null);
+    //var titleEL = driver.findElement(webdriver.By.className('title_name'));
+    //return titleEL.getText()
+    //    .then(function(title){
+    //        if(title != settings.RESET_TITLE){
+    //            var resetEl = driver.findElement(receiveRestLocator);
+    //            resetEl.click();
+    //            if(callback){
+    //                driver.call(callback, null, null);
+    //            }
+    //        }
+    //    })
+    //    .thenCatch(function(err){
+    //        console.error("[system]: Failed to reset in list [code]-------");
+    //        console.error(err);
+    //        if (callback) callback(err)
+    //        //TODO -- serious error
+    //    })
 };
