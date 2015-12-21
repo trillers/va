@@ -99,7 +99,7 @@ function* callback(){
                 NodeId: wechatManager.id,
                 RAM: require('../modules/wechat-manager/helper/getRAMUsage')(),
                 CPU: 0,
-                IP: require('../modules/wechat-manager/helper/getIPInfo')(),
+                //IP: require('../modules/wechat-manager/helper/getIPInfo')(),
                 ExceptedAgentSum: require('os').cpus().length,
                 ActualAgentSum: wechatManager.getAllWorkers().length || 0
             });
