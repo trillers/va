@@ -130,27 +130,21 @@ proto.start = function(options, callback){
     var self = this;
     console.log('[transaction]: begin to start botid=' + self.id);
     self.initialOptions = options;
-    if(self.loggedIn){
-        //pass directly
-        self._restart(function(err){
-            if(!err){
-                self._LoginOrNot(function(err){
-                    if(err){
-                        self._login(loggedInHandler);
-                    }else{
-                        done(callback)
-                    }
-                });
-                return;
-            }
-            console.warn("[flow]: Failed to restart, begin to login");
-            self._login(loggedInHandler);
-        });
-    }
-    else{
-        //login needed
+    //pass directly
+    self.startWithCookies(function(err){
+        if(!err){
+            self._LoginOrNot(function(err){
+                if(err){
+                    self._login(loggedInHandler);
+                }else{
+                    done(callback)
+                }
+            });
+            return;
+        }
+        console.warn("[flow]: Failed to start with cookies, begin to login");
         self._login(loggedInHandler);
-    }
+    });
     function loggedInHandler(err){
         clearInterval(self.waitForLogin);
         clearInterval(self.callCsToLogin);
@@ -454,11 +448,11 @@ proto.transition = function(status){
  * @returns {*}
  * @private
  */
-proto._restart = function(callback){
-    console.log("[flow]: Begin to restart");
+proto.startWithCookies = function(callback){
+    console.log("[flow]: Begin to start with cookies");
     var self = this;
     if(self.j.getCookies(settings.wxIndexUrl).length<=0){
-        return callback(new Error('[flow]: Failed to restart, cookies are lost'))
+        return callback(new Error('[flow]: Failed to start with cookies, cookies are lost'))
     }
     self.withDriver(null, {cookies: self.j.getCookies(settings.wxIndexUrl)});
     self.withNavigator(self.driver);
@@ -556,24 +550,29 @@ proto._login = function(callback){
  * @param callback function((Error, Array<{Cookies}>))
  */
 proto.getCookies = function(callback){
-    this.getSnapshot().then(function(o){
-        callback(null, o.j);
-    }).catch(function(e){
-        callback(e)
+    var self = this;
+    getSnapshot.bind(self)(function(err, o){
+        if(err){
+            console.error(err);
+            callback(err)
+        }else{
+            callback(null, o.j);
+        }
     })
 };
 
 /**
  * obtain bot's snapshot of status
- * @param Promise<Agent>
+ * @param callback function(Error, Agent)
  */
-proto.getSnapshot = Promise.promisify(function(callback){
+proto.getSnapshotAsync = Promise.promisify(getSnapshot);
+function getSnapshot(callback){
     var self = this;
     var fields = ['id', 'pid','status', 'prevStatus', 'managerId', 'initialOptions', 'sendTo', 'loggedIn'];
     var options = new webdriver.WebDriver.Options(self.driver);
     options.getCookies()
         .then(function(cookies){
-            var o = _.deepClone(self);
+            var o = _.objExclude(self, 'driver', 'callCsToLogin', 'waitForLogin', '_disConnectWatcher')
             _.objPick.apply(null, [o].concat(fields));
             o.j = cookies;
             callback(null, o)
@@ -581,7 +580,7 @@ proto.getSnapshot = Promise.promisify(function(callback){
         .thenCatch(function(e){
             callback(e)
         })
-});
+}
 
 proto.onContactProfile = function(handler){
     var self = this;

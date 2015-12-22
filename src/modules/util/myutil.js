@@ -99,12 +99,14 @@ util.objPick = function(o){
 };
 util.objExclude = function(o){
     var args = [].slice.call(arguments, 1);
+    var r = {};
+    util.mixin(r, o);
     args.forEach(function(p){
         if(p in o){
-            delete o[p];
+            delete r[p];
         }
     });
-    return o;
+    return r;
 };
 util.isArray = function(a){
     return Array.isArray(a);

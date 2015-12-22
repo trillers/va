@@ -221,7 +221,7 @@ function* stopHandler(){
 }
 
 function* snapshotHandler(){
-    var agent = yield worker.getSnapshot();
+    var agent = yield worker.getSnapshotAsync();
     process.send({
         method: 'snapshot',
         args: {

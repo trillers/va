@@ -60,9 +60,9 @@ function middle(profile){
     driver.call(readProfileHelper.readHeadImgAsync, obj, profileData);
     return driver.call(function(){
         console.log("profile**************");
-        util.objExclude(profileData, 'botid');
-        console.log(profileData);
-        var rate = util.objMatchRate(profile, profileData);
+        var unwrapData = util.objExclude(profileData, 'botid');
+        console.log(unwrapData);
+        var rate = util.objMatchRate(profile, unwrapData);
         console.log("match rate***********");
         console.log(rate);
         return rate >= 75
