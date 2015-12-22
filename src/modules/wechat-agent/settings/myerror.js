@@ -30,13 +30,23 @@ module.exports ={
         level: 2
     },
     USER_NO_HOST: {
-        code:806,
+        code: 806,
         msg: 'the current user is not host',
         level: 3
     },
     NO_SUCH_WINDOW: {
-        code:23,
+        code: 23,
         msg: 'window had been closed rudely',
+        level: 3
+    },
+    NO_LOGIN: {
+        code: 807,
+        msg: 'have not login yet or disconnected',
+        level: 2
+    },
+    DISCONNECT: {
+        code: 808,
+        msg: 'client has been disconnect by owner',
         level: 3
     }
 };

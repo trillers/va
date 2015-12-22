@@ -13,7 +13,7 @@ var microsFactory = require('../../app/macros');
 var helper = require('./helper');
 var myError = require('./settings/myerror');
 var Promise = require('bluebird');
-
+//functionalities
 var reset = require('./funcs/reset-pointer');
 var readProfile = require('./funcs/read-profile');
 var sendText = require('./funcs/send-text');
@@ -38,6 +38,7 @@ function WechatAgent(worker){
     this.loggedIn = worker.loggedIn || false;
     this.callCsToLogin = null;
     this.waitForLogin = null;
+    this._disConnectWatcher = null;
     this.baseUrl = "";
     this.j = (function(){
         var jar = request.jar();
@@ -201,6 +202,7 @@ proto.start = function(options, callback){
     }
     function done(callback){
         self.loggedIn = true;
+        self._watchDisconnect();
         self.transition(STATUS.LOGGED);
         self.emit('login', {err: null, data: {botid: self.id}});
         self.extractCookies();
@@ -258,6 +260,10 @@ proto.init = function(bot){
     if(bot.waitForLogin){
         clearInterval(bot.waitForLogin);
         bot.waitForLogin = null;
+    }
+    if(bot._disConnectWatcher){
+        clearInterval(bot._disConnectWatcher);
+        bot._disConnectWatcher = null;
     }
     bot.emit('abort', {err: null, data: {botid: bot.id}});
 };
@@ -416,7 +422,7 @@ proto._LoginOrNot = Promise.promisify(function(callback){
             if(txt != ''){
                 callback(null, null);
             } else {
-                callback(new Error('LOGIN_FAILED'))
+                callback(new webdriver.error.Error(myError.NO_LOGIN.code, myError.NO_LOGIN.msg))
             }
         })
 });
@@ -458,6 +464,33 @@ proto._restart = function(callback){
     self.withNavigator(self.driver);
     self.driver.sleep(3000);
     self.driver.call(callback, null, null);
+};
+
+/**
+ * polling watch the bot disconnect or not
+ * @private
+ */
+proto._watchDisconnect = function(){
+    var self = this;
+    self._disConnectWatcher = setInterval(function(){
+        self.driver.call(function(){
+            var spanEl = self.driver.findElement({css: '.nickname span'});
+            self.driver.sleep(1000);
+            return spanEl.getText()
+        })
+        .then(function(txt){
+            if(txt == '' && _.arr.in(['logged', 'exceptional'], self.status)){
+                clearInterval(self._disConnectWatcher);
+                return webdriver.promise.rejected(new webdriver.error.Error(myError.DISCONNECT.code, myError.DISCONNECT.msg));
+            }
+        })
+        .thenCatch(function(e){
+            if(e.code === myError.DISCONNECT.code){
+                throw e;
+            }
+            //nothing to do
+        })
+    }, 5000)
 };
 
 /**
