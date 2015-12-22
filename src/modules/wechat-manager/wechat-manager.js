@@ -95,13 +95,8 @@ proto._initWorker = function(worker, entity, opt){
         };
         worker.send(cmd);
     });
-    worker.on('disconnect', function(pid){
-        delete self.workers[pid];
-        self.broker.statusChange({
-            NodeId: self.id,
-            ExceptedAgentSum: self.exceptedAgentSum,
-            ActualAgentSum: self.getAllWorkers().length
-        })
+    worker.on('disconnect', function(){
+        removeWorkerFromSet();
     });
     worker.on('exit', function(code, signal){
         if( signal ) {
@@ -111,13 +106,19 @@ proto._initWorker = function(worker, entity, opt){
         } else {
             console.log("worker exit success!");
         }
+        removeWorkerFromSet();
+    });
+    function removeWorkerFromSet(){
+        if(!self.workers[worker.process.pid]){
+            return;
+        }
         delete self.workers[worker.process.pid];
         self.broker.statusChange({
             NodeId: self.id,
             ExceptedAgentSum: self.exceptedAgentSum,
             ActualAgentSum: self.getAllWorkers().length || 0
         })
-    });
+    }
 };
 
 /**
