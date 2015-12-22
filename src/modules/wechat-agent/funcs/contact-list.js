@@ -4,7 +4,6 @@ var qs = require('querystring');
 var reset = require('./reset-pointer');
 var request = require('request');
 var closeLocator = webdriver.By.css('div.ngdialog-close');
-var fsServer = require('../../../app/settings').fsUrl;
 var validateIsNormalStrOrNot = require('../../util').validateIsNormalStrOrNot;
 /**
  * contact list info spider

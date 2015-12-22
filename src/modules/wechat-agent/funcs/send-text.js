@@ -30,7 +30,6 @@ module.exports = function sendText(json, callback){
         })
         .thenCatch(function (err) {
             console.warn("[flow]: send text, Failed to send text to the contact");
-            console.warn(err);
             self.driver.call(reset, self);
             self.driver.call(callback, null, err);
         });
