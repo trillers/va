@@ -163,32 +163,3 @@ function hasUserName(arr, key) {
     }
     return false;
 }
-function uploadImgAsync(self, src){
-    return new webdriver.promise.Promise(function(resolve, reject){
-        var formData = {
-            file: {
-                value: request({url: src, jar: self.j, encoding: null}),
-                options: {
-                    filename: 'yyy.jpeg'
-                }
-            }
-        };
-        request.post({url:fsServer, formData: formData}, function(err, res, body) {
-            if (err) {
-                console.error('[flow]: Failed to upload headimg to FsServer-0');
-                return reject(err);
-            }
-            try{
-                var json = JSON.parse(body);
-            }catch(e){
-                console.error("[flow]: -receive message - Failed to parse json from file server");
-                return reject(e);
-            }
-            if(json.err){
-                console.error('[flow]: Failed to upload headimg to FsServer-1');
-                return reject(json.err);
-            }
-            resolve(json);
-        });
-    })
-}

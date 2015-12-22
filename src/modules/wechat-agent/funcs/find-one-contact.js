@@ -15,7 +15,6 @@ module.exports = function(sendTo){
         return self.driver.sleep(1000);
     });
     driver.findElements(webdriver.By.css('div.contact_item.on')).then(function(coll){
-        console.info(coll);
         if(coll && coll.length>0){
             collection = coll;
         }else{
@@ -24,10 +23,6 @@ module.exports = function(sendTo){
     });
     driver.call(function(){
         return webdriver.promise.map(collection, function(item, index, arr){
-            console.warn("*******************")
-            console.warn(item);
-            console.warn(index)
-            console.warn(arr);
             if(arr.length <= 0){
                 //no search contact to send
                 return webdriver.promise.rejected(new webdriver.error.Error(MYERROR.NO_SUCH_CONTACT.code, MYERROR.NO_SUCH_CONTACT.msg))
@@ -53,9 +48,6 @@ module.exports = function(sendTo){
         })
         .thenCatch(function(e){
             console.warn('Failed to find the contact');
-            //if(e.code != MYERROR.NO_RESULT.code){
-            //    return console.error(e);
-            //}
             return webdriver.promise.rejected(new webdriver.error.Error(e))
         })
     })
