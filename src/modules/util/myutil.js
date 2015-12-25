@@ -137,6 +137,22 @@ util.arr.remove = function(arr, o){
 util.arr.in = function(arr, o){
     return arr.indexOf(o) >=0;
 };
+util.arr.groupBy = function (ar, f, cb){
+    var m = {};
+    for(var i=0, len=ar.length; i<len; i++){
+        var o = ar[i];
+        for(var t in o){
+            if(t===f){
+                if(!m[o[t]]){
+                    m[o[t]] = [];
+                }
+                m[o[t]].push(o)
+            }
+        }
+    }
+    cb && cb(m);
+    return m;
+};
 util.obj = {};
 util.obj.isEmpty = function(o){
     return util.typeof(o) && Object.keys(o).length<=0 || false
