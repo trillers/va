@@ -156,7 +156,18 @@ function* callback(){
                 wechatManager.spawnWorker(agent);
             }
             if (data.Command === 'stop') {
-                wechatManager.stop(data.AgentId);
+                wechatManager.stop(data.AgentId, function(e){
+                    if(e){
+                        var msg = {
+                            NewStatus: 'exited',
+                            CreateTime: (new Date()).getTime(),
+                            AgentId: data.AgentId,
+                            NodeId: wechatManager.id
+                        };
+                        broker.brokerAgent.agentStatusChange(msg);
+                        broker.brokerAgent.botStatusChange(msg);
+                    }
+                });
             }
             if (data.Command === 'restart') {
                 wechatManager.restart(data.AgentId);

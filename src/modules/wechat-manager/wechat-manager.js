@@ -151,6 +151,7 @@ proto.stop = function(id, callback){
     catch(e){
         console.warn(e);
         console.warn('Failed to stop agent, agent process is already exit');
+        callback && callback(e);
     }
     function stopHandler(){
         console.log('Succeed to stop the agent, [id]=' + worker.AgentId);
