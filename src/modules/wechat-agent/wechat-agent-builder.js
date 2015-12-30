@@ -205,13 +205,12 @@ function* startHandler(args){
 
 function* stopHandler(){
     try{
-        yield worker.stop();
         worker.transition(STATUS.EXITED);
         yield new Promise(function(resolve, reject){
             setTimeout(function(){
                 process.exit();
                 resolve();
-            }, 2000)
+            }, 1000)
         })
     }
     catch(e){
