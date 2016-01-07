@@ -436,6 +436,7 @@ proto.transition = function(status){
             AgentId: self.id,
             NodeId: self.managerId
         };
+        console.warn(msg);
         broker.brokerAgent.agentStatusChange(msg);
         broker.brokerAgent.botStatusChange(msg);
     })

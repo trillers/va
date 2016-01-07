@@ -142,6 +142,7 @@ function* callback(){
          *
          */
         broker.brokerManager.onCommand(function (err, data) {
+            console.error(data)
             if (data.Command === 'start') {
                 var agent = {
                     id: data.AgentId,
