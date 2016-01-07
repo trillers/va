@@ -45,12 +45,12 @@ function* callback(){
 
         //bind vc event listener
         var broker = yield getBroker();
-        wechatManager.broker = broker.brokerManager;
+        wechatManager.broker = broker.agentManager;
         //agent manager broker init
-        broker.brokerManager.init(wechatManager.id);
+        broker.agentManager.init(wechatManager.id);
 
         //am is started
-        broker.brokerManager.statusChange({
+        broker.agentManager.statusChange({
             CreateTime: new Date(),
             NodeId: wechatManager.id,
             OldStatus: 'stopped',
@@ -59,7 +59,7 @@ function* callback(){
 
         //continue to heartbeat
         setInterval(function () {
-            broker.brokerManager.heartbeat({
+            broker.agentManager.heartbeat({
                 CreateTime: (new Date()).getTime(),
                 NodeId: wechatManager.id
             });
@@ -74,7 +74,7 @@ function* callback(){
      *  }
          */
         process.on('exit', function () {
-            broker.brokerManager.statusChange({
+            broker.agentManager.statusChange({
                 CreateTime: new Date(),
                 NodeId: wechatManager.id,
                 OldStatus: 'started',
@@ -92,9 +92,9 @@ function* callback(){
      *      ActualAgentSum: 实际
      *  }
          */
-        broker.brokerManager.onInfoRequest(function (err, data) {
+        broker.agentManager.onInfoRequest(function (err, data) {
             console.log('[system]: receive a status request event');
-            broker.brokerManager.infoResponse({
+            broker.agentManager.infoResponse({
                 CreateTime: (new Date()).getTime(),
                 NodeId: wechatManager.id,
                 RAM: require('../modules/wechat-manager/helper/getRAMUsage')(),
@@ -141,8 +141,7 @@ function* callback(){
      *  }
          *
          */
-        broker.brokerManager.onCommand(function (err, data) {
-            console.error(data)
+        broker.agentManager.onCommand(function (err, data) {
             if (data.Command === 'start') {
                 var agent = {
                     id: data.AgentId,
@@ -166,8 +165,8 @@ function* callback(){
                             AgentId: data.AgentId,
                             NodeId: wechatManager.id
                         };
-                        broker.brokerAgent.agentStatusChange(msg);
-                        broker.brokerAgent.botStatusChange(msg);
+                        broker.agent.agentStatusChange(msg);
+                        broker.agent.botStatusChange(msg);
                     }
                 });
             }

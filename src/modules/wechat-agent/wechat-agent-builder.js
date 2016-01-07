@@ -1,7 +1,7 @@
 var net = require('net');
 var agentFactory = require('./wechat-agent');
 var server = net.createServer(function(socket) {});
-var worker = {};
+var agent = {};
 var settings = require('./wechat-agent-settings');
 var getBroker = require('../wechat-broker');
 var MYERROR = require('./settings/myerror');
@@ -33,9 +33,9 @@ function noop(e){console.error(e)}
 //def how to handle event from ipc
 function* startHandler(args){
     try {
-        worker = agentFactory(args.workerJson);
+        agent = agentFactory(args.workerJson);
         process.removeListener('uncaughtException', noop);
-        process.on('uncaughtException', protectorBuilder(worker));
+        process.on('uncaughtException', protectorBuilder(agent));
         var actionsMap = {
             //one way
             'send-txt': {
@@ -72,16 +72,16 @@ function* startHandler(args){
         var broker = yield getBroker();
 
         setInterval(function () {
-            broker.brokerAgent.heartbeat({
+            broker.agent.heartbeat({
                 CreateTime: (new Date()).getTime(),
-                AgentStatus: worker.status,
-                PId: worker.pid,
-                AgentId: worker.id,
-                NodeId: worker.managerId
+                AgentStatus: agent.status,
+                PId: agent.pid,
+                AgentId: agent.id,
+                NodeId: agent.managerId
             });
         }, settings.heartbeatGap);
 
-        worker.onNeedLogin(function (err, data) {
+        agent.onNeedLogin(function (err, data) {
             if (!err) {
                 var msg = {
                     CreateTime: (new Date()).getTime(),
@@ -90,39 +90,39 @@ function* startHandler(args){
                     MediaUrl: data.mediaUrl
                 };
                 console.log(msg);
-                broker.brokerAgent.actionIn(msg);
+                broker.agent.actionIn(msg);
             }
         });
 
-        worker.onRemarkContact(function (err, data) {
+        agent.onRemarkContact(function (err, data) {
             if (!err) {
                 var msg = {
                     CreateTime: (new Date()).getTime(),
                     Action: 'remark-contact',
-                    AgentId: worker.id,
+                    AgentId: agent.id,
                     Data: data
                 };
                 console.info("send vk a first contact event********");
                 console.info(msg);
-                broker.brokerAgent.actionIn(msg);
+                broker.agent.actionIn(msg);
             }
         });
 
-        worker.onFirstProfile(function (err, data) {
+        agent.onFirstProfile(function (err, data) {
             if (!err) {
                 var msg = {
                     CreateTime: (new Date()).getTime(),
                     Action: 'first-profile',
-                    AgentId: worker.id,
+                    AgentId: agent.id,
                     Data: data
                 };
                 console.info("send vk a first profile event********");
                 console.info(msg);
-                broker.brokerAgent.actionIn(msg);
+                broker.agent.actionIn(msg);
             }
         });
 
-        worker.onLogin(function (err, data) {
+        agent.onLogin(function (err, data) {
             if (!err) {
                 var msg = {
                     CreateTime: (new Date()).getTime(),
@@ -130,54 +130,54 @@ function* startHandler(args){
                     AgentId: data.botid
                 };
                 console.log(msg);
-                broker.brokerAgent.actionIn(msg);
+                broker.agent.actionIn(msg);
             }
         });
 
-        worker.onReceive(function (err, msgArr) {
+        agent.onReceive(function (err, msgArr) {
             if (!err) {
                 console.error(err);
                 return;
             }
             msgArr.forEach(function (msg) {
-                broker.brokerAgent.actionIn(msg);
+                broker.agent.actionIn(msg);
             })
         });
 
-        worker.start(args.options, function (err) {
+        agent.start(args.options, function (err) {
             if (err) {
-                console.error("[system]: Failed to start worker id=" + args.workerJson.id);
+                console.error("[system]: Failed to start agent id=" + args.workerJson.id);
                 err && err.code && fatalErrFilter(err);
                 console.error(err);
             }
             //TODO begin to polling
             console.log("[system]: agent is logged in, begin to polling id=" + args.workerJson.id);
-            broker.brokerAgent.init(worker.id);
+            broker.agent.init(agent.id);
 
-            broker.brokerAgent.onActionOut(function (err, data, msg) {
-                if(_.arr.in([STATUS.ABORTED, STATUS.EXITED], worker.status)){
+            broker.agent.onActionOut(function (err, data, msg) {
+                if(_.arr.in([STATUS.ABORTED, STATUS.EXITED], agent.status)){
                     return console.warn('[system]: control flow is already destroyed');
                 }
-                var fn = worker[actionsMap[data.Action].name];
+                var fn = agent[actionsMap[data.Action].name];
                 var type = actionsMap[data.Action].type;
                 var len = fn.length;
                 if (len > 1) {
-                    fn.call(worker, data, done)
+                    fn.call(agent, data, done)
                 } else {
-                    fn.call(worker, done)
+                    fn.call(agent, done)
                 }
                 function done(err, json) {
                     if (err) {
                         err && err.code && fatalErrFilter(err);
                         //status change
-                        //worker.transition(STATUS.EXCEPTIONAL);
+                        //agent.transition(STATUS.EXCEPTIONAL);
                     }
                     data.Data = json;
                     if (type === 'rr') {
-                        broker.brokerAgent.actionIn(data);
+                        broker.agent.actionIn(data);
                     }
-                    broker.brokerAgent.finish(msg);
-                    broker.brokerAgent.actionFeedback({
+                    broker.agent.finish(msg);
+                    broker.agent.actionFeedback({
                         CreateTime: (new Date()).getTime(),
                         Action: data.Action,
                         AgentId: data.AgentId,
@@ -186,12 +186,12 @@ function* startHandler(args){
                         Decs: ''
                     });
                 }
-            }, worker.id);
+            }, agent.id);
 
-            broker.brokerAgent.commandFeedback({
+            broker.agent.commandFeedback({
                 CreateTime: (new Date()).getTime(),
                 Command: CONST.NODE.COMMAND.START,
-                AgentId: worker.id,
+                AgentId: agent.id,
                 Took: 0,
                 Code: CONST.STATUS_CODE.SUCCESS,
                 Desc: ''
@@ -205,9 +205,9 @@ function* startHandler(args){
 
 function* stopHandler(){
     try{
-        console.log('agent ['+ worker.id +'] receive a stop command, prepare to exit');
-        worker.stop().then(function(){
-            worker.transition(STATUS.EXITED);
+        console.log('agent ['+ agent.id +'] receive a stop command, prepare to exit');
+        agent.stop().then(function(){
+                agent.transition(STATUS.EXITED);
             return new Promise(function(resolve, reject){
                 setTimeout(function(){
                     process.exit();
@@ -216,7 +216,7 @@ function* stopHandler(){
             })
         })
         .catch(function(){
-            worker.transition(STATUS.EXITED);
+            agent.transition(STATUS.EXITED);
             return new Promise(function(resolve, reject){
                 setTimeout(function(){
                     process.exit();
@@ -232,7 +232,7 @@ function* stopHandler(){
 }
 
 function* snapshotHandler(){
-    var agent = yield worker.getSnapshotAsync();
+    var agent = yield agent.getSnapshotAsync();
     process.send({
         method: 'snapshot',
         args: {

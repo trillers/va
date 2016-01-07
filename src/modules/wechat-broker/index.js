@@ -10,8 +10,8 @@ module.exports = function(app){
     return brokerCache.then(function(broker){
         app && app.emitter.emit('complete', {serviceName: tempSettings.services.RABBITMQ});
         return {
-            brokerAgent: broker.getAgent(),
-            brokerManager: broker.getAgentManager()
+            agent: broker.getAgent(),
+            agentManager: broker.getAgentManager()
         };
     })
 };
