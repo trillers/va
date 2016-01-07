@@ -99,6 +99,7 @@ module.exports.readHeadImgAsync = readHeadImgAsync;
 function openPanel(){
     var self = this;
     var boxItem = self.driver.findElement({'css': '#chatArea>.box_hd'});
+    self.driver.sleep(500);
     boxItem.findElement({'css': 'div.title_wrap>div.title.poi'}).click()
         .thenCatch(function(e){
             console.error('[flow]: read profile, Failed to click #chatArea>.box_hd');
