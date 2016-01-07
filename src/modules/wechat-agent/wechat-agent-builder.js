@@ -205,13 +205,25 @@ function* startHandler(args){
 
 function* stopHandler(){
     try{
-        worker.transition(STATUS.EXITED);
-        yield new Promise(function(resolve, reject){
-            setTimeout(function(){
-                process.exit();
-                resolve();
-            }, 1000)
+        console.log('agent ['+ worker.id +'] receive a stop command, prepare to exit');
+        worker.stop().then(function(){
+            worker.transition(STATUS.EXITED);
+            return new Promise(function(resolve, reject){
+                setTimeout(function(){
+                    process.exit();
+                    resolve();
+                }, 1000)
+            })
         })
+        .catch(function(){
+            worker.transition(STATUS.EXITED);
+            return new Promise(function(resolve, reject){
+                setTimeout(function(){
+                    process.exit();
+                    resolve();
+                }, 1000)
+            })
+        });
     }
     catch(e){
         console.log(e.message);

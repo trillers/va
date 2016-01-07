@@ -181,8 +181,7 @@ proto.start = function(options, callback){
                 if(matchUser(currProfile, oriProfile)){
                     done(callback);
                 } else {
-                    console.warn('check stop in bot or not');
-                    console.warn('stop' in self);
+                    self.transition(STATUS.MISLOGGED);
                     self.stop().then(function(){
                         return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
                     })
@@ -520,7 +519,6 @@ proto._login = function(callback){
             }
         });
         self.callCsToLogin = setInterval(function(){
-            self.transition(STATUS.MISLOGGED);
             helper.needLogin(self, function(err){
                 if(err){
                     return callback(err)

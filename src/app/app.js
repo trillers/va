@@ -36,7 +36,7 @@ function* callback(){
         //create a master process, connection never end
         var server = net.createServer(function (socket) {
         });
-        server.listen(3000);
+        server.listen();
         //build wechat manager
         wechatManager = wechatManagerFactory({
             id: settings.id,
@@ -156,6 +156,7 @@ function* callback(){
                 wechatManager.spawnWorker(agent);
             }
             if (data.Command === 'stop') {
+                console.log('receive a stop command from vn, agent id is ' + data.AgentId);
                 wechatManager.stop(data.AgentId, function(e){
                     if(e){
                         var msg = {

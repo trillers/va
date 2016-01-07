@@ -55,7 +55,6 @@ module.exports = readProfile = function readProfile(bid, callback){
                 });
             driver.call(readRemark, self, data)
                 .then(function(){
-                    console.log("$$$$$$$$$$$$$$$$$");
                     console.log(data);
                     console.info('[flow]: read profile, Succeed to read remark');
                     if(data.remark == ''){
@@ -290,35 +289,3 @@ function readHeadImg(data, callback){
             });
         })
 }
-//function readHeadImg(data, callback){
-//    var self = this;
-//    var headEl =  self.driver.findElement({'css': 'div#mmpop_profile>div.profile_mini div.profile_mini_hd img'});
-//    headEl.getAttribute('src')
-//        .then(function(src){
-//            var urlJson = _.pick(url.parse(src), 'protocol', 'slashes', 'host', 'hostname', 'pathname');
-//            var qsJson = qs.parse(url.parse(src).query);
-//            delete qsJson["skey"];
-//            delete qsJson["type"];
-//            urlJson.search = qs.stringify(qsJson);
-//            var formatUrl = url.format(urlJson);
-//            request.get({url: formatUrl, jar: self.j, encoding: null}, function(err, res, body){
-//                if(body && body.length){
-//                    console.info("[flow]: Succeed to upload head img, body  length  "+body.length)
-//                }
-//                var formData = {file: {value: body, options: {filename: 'xxx.jpg'}}};
-//                request.post({url:fsServer, formData: formData}, function(err, res, body) {
-//                    if (err) {
-//                        return callback(err, null);
-//                    }
-//                    try{
-//                        var json = JSON.parse(body);
-//                    }catch(e){
-//                        return callback(e, data);
-//                    }
-//                    console.info('[flow]: Succeed to upload the headImg');
-//                    data.headimgid = json['media_id'] || "";
-//                    callback(json.err, data);
-//                });
-//            })
-//        })
-//}

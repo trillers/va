@@ -145,6 +145,7 @@ proto.stop = function(id, callback){
         console.warn('Failed to stop agent, no such agent is started, [id]=' + id);
     }
     try{
+        console.info('node manager forward the stop command to agent');
         worker.send({method: 'stop'});
         worker.on('exit', stopHandler);
     }
