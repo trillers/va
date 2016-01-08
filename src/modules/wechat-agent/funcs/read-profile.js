@@ -110,7 +110,7 @@ function openPanel(){
             console.error('[flow]: read profile, Failed to Wait for Element -> #chatArea>.box_hd');
             return webdriver.promise.rejected(e);
         });
-    self.driver.sleep(3000);
+    self.driver.sleep(1000);
     var btn = boxItem.findElement({'css': '#chatRoomMembersWrap div.member:nth-child(2)>img'});
     btn.click()
         .then(function(){console.info('[flow]: read profile, the profile panel is opened');})
