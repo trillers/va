@@ -493,33 +493,39 @@ proto._watchDisconnect = function(){
  */
 proto._loginDirectly = function(callback){
     var self = this;
-    helper.needLogin(self, function(e){
-        if(e){
-            return callback(e)
-        }
-    });
-    self.callCsToLogin = setInterval(function(){
-        helper.needLogin(self, function(err){
-            if(err){
-                return callback(err)
+    console.log("[flow]: Begin to login");
+    self.transition(STATUS.LOGGING);
+    self.driver.sleep(500);
+    self.driver.call(function(){
+        console.log(self);
+        helper.needLogin(self, function(e){
+            if(e){
+                return callback(e)
             }
         });
-    }, settings.callCsToLoginGap);
-    self.waitForLogin = setInterval(function(){
-        self.driver.findElement({css: '.nickname span'})
-            .then(function(span){
-                return span.getText()
-            })
-            .then(function(txt){
-                if(!self.loggedIn && txt != ""){
-                    return callback(null);
+        self.callCsToLogin = setInterval(function(){
+            helper.needLogin(self, function(err){
+                if(err){
+                    return callback(err)
                 }
-            })
-            .thenCatch(function(e){
-                console.error("[system]: Failed to wait for login");
-                return callback(e);
-            })
-    }, settings.waitForLoginGap);
+            });
+        }, settings.callCsToLoginGap);
+        self.waitForLogin = setInterval(function(){
+            self.driver.findElement({css: '.nickname span'})
+                .then(function(span){
+                    return span.getText()
+                })
+                .then(function(txt){
+                    if(!self.loggedIn && txt != ""){
+                        return callback(null);
+                    }
+                })
+                .thenCatch(function(e){
+                    console.error("[system]: Failed to wait for login");
+                    return callback(e);
+                })
+        }, settings.waitForLoginGap);
+    })
 };
 
 /**
