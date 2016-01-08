@@ -135,7 +135,7 @@ proto.start = function(options, callback){
         if(!err){
             self._LoginOrNot(function(err){
                 if(err){
-                    self._login(loggedInHandler);
+                    self._loginDirectly(loggedInHandler);
                 }else{
                     done(callback)
                 }
@@ -495,6 +495,8 @@ proto._watchDisconnect = function(){
 proto._loginDirectly = function(callback){
     var self = this;
     console.log("[flow]: Begin to login");
+    console.warn(self);
+    console.warn(typeof self.driver);
     self.transition(STATUS.LOGGING);
     self.driver.sleep(500);
     self.driver.call(function(){
