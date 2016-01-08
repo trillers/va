@@ -98,8 +98,12 @@ module.exports.readHeadImgAsync = readHeadImgAsync;
 function openPanel(){
     var self = this;
     var boxItem = self.driver.findElement({'css': '#chatArea>.box_hd'});
-    self.driver.sleep(500);
-    boxItem.findElement({'css': 'div.title_wrap>div.title.poi'}).click()
+    self.driver.sleep(100);
+    var titleEl = boxItem.findElement({'css': 'div.title_wrap>div.title.poi'});
+    var sequence = new webdriver.ActionSequence(self.driver);
+    sequence.mouseMove(titleEl)
+        .click()
+        .perform()
         .thenCatch(function(e){
             console.error('[flow]: read profile, Failed to click #chatArea>.box_hd');
             return webdriver.promise.rejected(e);
