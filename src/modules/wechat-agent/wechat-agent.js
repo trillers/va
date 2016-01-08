@@ -492,6 +492,7 @@ proto._watchDisconnect = function(){
  * @private
  */
 proto._loginDirectly = function(callback){
+    var self = this;
     helper.needLogin(self, function(e){
         if(e){
             return callback(e)
