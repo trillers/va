@@ -177,18 +177,19 @@ proto.start = function(options, callback){
                 nickname: options.nickname,
                 sex: options.sex
             };
-            self.driver.call(getHostProfile, self).then(function(currProfile){
-                if(matchUser(currProfile, oriProfile)){
-                    done(callback);
-                } else {
-                    self.transition(STATUS.MISLOGGED);
-                    self.stop().then(function(){
-                        return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
-                    })
-                }
-            }).thenCatch(function(e){
-                callback(e);
-            })
+            self.driver.call(getHostProfile, self)
+                .then(function(currProfile){
+                    if(matchUser(currProfile, oriProfile)){
+                        done(callback);
+                    } else {
+                        self.transition(STATUS.MISLOGGED);
+                        self.stop().then(function(){
+                            return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
+                        })
+                    }
+                }).thenCatch(function(e){
+                    callback(e);
+                })
         } else {
             done(callback)
         }
