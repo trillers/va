@@ -135,7 +135,7 @@ proto.start = function(options, callback){
         if(!err){
             self._LoginOrNot(function(err){
                 if(err){
-                    self._login(loggedInHandler);
+                    self._loginDirectly(loggedInHandler);
                 }else{
                     done(callback)
                 }
@@ -143,7 +143,7 @@ proto.start = function(options, callback){
             return;
         }
         console.warn("[flow]: Failed to start with cookies, begin to login");
-        self._login(loggedInHandler);
+        self._loginDirectly(loggedInHandler);
     });
     function loggedInHandler(err){
         clearInterval(self.waitForLogin);
@@ -488,6 +488,40 @@ proto._watchDisconnect = function(){
 };
 
 /**
+ * trigger need login event directly, needn't to get page by driver
+ * @private
+ */
+proto._loginDirectly = function(callback){
+    helper.needLogin(self, function(e){
+        if(e){
+            return callback(e)
+        }
+    });
+    self.callCsToLogin = setInterval(function(){
+        helper.needLogin(self, function(err){
+            if(err){
+                return callback(err)
+            }
+        });
+    }, settings.callCsToLoginGap);
+    self.waitForLogin = setInterval(function(){
+        self.driver.findElement({css: '.nickname span'})
+            .then(function(span){
+                return span.getText()
+            })
+            .then(function(txt){
+                if(!self.loggedIn && txt != ""){
+                    return callback(null);
+                }
+            })
+            .thenCatch(function(e){
+                console.error("[system]: Failed to wait for login");
+                return callback(e);
+            })
+    }, settings.waitForLoginGap);
+};
+
+/**
  * allow agent to login
  * @param callback
  * @private
@@ -507,41 +541,14 @@ proto._login = function(callback){
         .thenCatch(function(){
             //cookies become invalid
             console.warn('[flow]: cookie become invalid');
-            self.driver.call(waitForLogin, null)
-                .thenCatch(function(e){
+            self._loginDirectly(function(e){
+                if(e){
                     console.error("[system]: Failed to login");
                     return callback(e);
-                });
-        });
-    function waitForLogin(){
-        helper.needLogin(self, function(e){
-            if(e){
-                return callback(e)
-            }
-        });
-        self.callCsToLogin = setInterval(function(){
-            helper.needLogin(self, function(err){
-                if(err){
-                    return callback(err)
                 }
+                callback(null);
             });
-        }, settings.callCsToLoginGap);
-        self.waitForLogin = setInterval(function(){
-            self.driver.findElement({css: '.nickname span'})
-                .then(function(span){
-                    return span.getText()
-                })
-                .then(function(txt){
-                    if(!self.loggedIn && txt != ""){
-                        return callback(null);
-                    }
-                })
-                .thenCatch(function(e){
-                    console.error("[system]: Failed to wait for login");
-                    return callback(e);
-                })
-        }, settings.waitForLoginGap);
-    }
+        });
 };
 
 /**
