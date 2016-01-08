@@ -102,7 +102,7 @@ function openPanel(){
     var titleEl = boxItem.findElement({'css': 'div.title_wrap>div.title.poi'});
     self.driver.executeScript('arguments[0].click();', titleEl)
         .thenCatch(function(e){
-            console.error('[flow]: read profile, Failed to click #chatArea>.box_hd');
+            console.error('[flow]: read profile, Failed to click title');
             return webdriver.promise.rejected(e);
         });
     self.driver.wait(webdriver.until.elementLocated(webdriver.By.css('#chatRoomMembersWrap div.member:nth-child(2)>img')), 2000)
