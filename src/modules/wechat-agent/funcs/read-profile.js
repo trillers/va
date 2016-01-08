@@ -100,10 +100,7 @@ function openPanel(){
     var boxItem = self.driver.findElement({'css': '#chatArea>.box_hd'});
     self.driver.sleep(100);
     var titleEl = boxItem.findElement({'css': 'div.title_wrap>div.title.poi'});
-    var sequence = new webdriver.ActionSequence(self.driver);
-    sequence.mouseMove(titleEl)
-        .perform();
-    self.driver.executeScript('arguments[0].click();')
+    self.driver.executeScript('arguments[0].click();', titleEl)
         .thenCatch(function(e){
             console.error('[flow]: read profile, Failed to click #chatArea>.box_hd');
             return webdriver.promise.rejected(e);
