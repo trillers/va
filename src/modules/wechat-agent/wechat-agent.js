@@ -135,7 +135,7 @@ proto.start = function(options, callback){
         if(!err){
             self._LoginOrNot(function(err){
                 if(err){
-                    self._loginDirectly(loggedInHandler);
+                    self._login(loggedInHandler);
                 }else{
                     done(callback)
                 }
@@ -143,7 +143,7 @@ proto.start = function(options, callback){
             return;
         }
         console.warn("[flow]: Failed to start with cookies, begin to login");
-        self._loginDirectly(loggedInHandler);
+        self._login(loggedInHandler);
     });
     function loggedInHandler(err){
         clearInterval(self.waitForLogin);
@@ -497,7 +497,6 @@ proto._loginDirectly = function(callback){
     self.transition(STATUS.LOGGING);
     self.driver.sleep(500);
     self.driver.call(function(){
-        console.log(self);
         helper.needLogin(self, function(e){
             if(e){
                 return callback(e)
