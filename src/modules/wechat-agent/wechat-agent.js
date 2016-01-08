@@ -470,7 +470,7 @@ proto._watchDisconnect = function(){
     self._disConnectWatcher = setInterval(function(){
         self.driver.call(function(){
             var spanEl = self.driver.findElement({css: '.nickname span'});
-            self.driver.sleep(1000);
+            self.driver.sleep(200);
             return spanEl.getText()
         })
         .then(function(txt){
