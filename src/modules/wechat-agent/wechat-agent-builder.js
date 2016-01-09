@@ -169,8 +169,6 @@ function* startHandler(args){
                 function done(err, json) {
                     if (err) {
                         err && err.code && fatalErrFilter(err);
-                        //status change
-                        //agent.transition(STATUS.EXCEPTIONAL);
                     }
                     data.Data = json;
                     if (type === 'rr') {
@@ -206,24 +204,25 @@ function* startHandler(args){
 function* stopHandler(){
     try{
         console.log('agent ['+ agent.id +'] receive a stop command, prepare to exit');
-        agent.stop().then(function(){
+        agent.stop()
+            .then(function(){
                 agent.transition(STATUS.EXITED);
-            return new Promise(function(resolve, reject){
-                setTimeout(function(){
-                    process.exit();
-                    resolve();
-                }, 1000)
+                return new Promise(function(resolve, reject){
+                    setTimeout(function(){
+                        process.exit();
+                        resolve();
+                    }, 1000)
+                })
             })
-        })
-        .catch(function(){
-            agent.transition(STATUS.EXITED);
-            return new Promise(function(resolve, reject){
-                setTimeout(function(){
-                    process.exit();
-                    resolve();
-                }, 1000)
-            })
-        });
+            .catch(function(){
+                agent.transition(STATUS.EXITED);
+                return new Promise(function(resolve, reject){
+                    setTimeout(function(){
+                        process.exit();
+                        resolve();
+                    }, 1000)
+                })
+            });
     }
     catch(e){
         console.log(e.message);

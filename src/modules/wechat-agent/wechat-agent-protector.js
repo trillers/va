@@ -6,20 +6,23 @@ module.exports = function(agent){
     return function(err){
         if(err.code){
             if(fatelErrorFilter(err)){
-                agent.stop().then(function(){
-                    agent.transition(STATUS.ABORTED);
-                    setTimeout(function(){
-                        agent = null;
-                        process.exit();
-                    }, 2000);
-                }).catch(function(){
-                    agent.transition(STATUS.ABORTED);
-                    setTimeout(function(){
-                        agent = null;
-                        process.exit();
-                    }, 2000);
-                })
+                agent.stop()
+                    .then(function(){
+                        done();
+                    })
+                    .catch(function(){
+                        done();
+                    });
                 return;
+            }
+            function done(){
+                if([STATUS.ABORTED, STATUS.MISLOGGED, STATUS.EXITED].indexOf(agent.status) < 0){
+                    agent.transition(STATUS.ABORTED);
+                }
+                setTimeout(function(){
+                    agent = null;
+                    process.exit();
+                }, 2000);
             }
         }
         else{

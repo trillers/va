@@ -183,11 +183,11 @@ proto.start = function(options, callback){
                         done(callback);
                     } else {
                         self.transition(STATUS.MISLOGGED);
-                        self.stop().then(function(){
-                            return callback(new webdriver.error.Error(myError.USER_NO_HOST.code, myError.USER_NO_HOST.msg));
-                        })
+                        var err = myError.USER_NO_HOST;
+                        return callback(new webdriver.error.Error(err.code, err.msg));
                     }
-                }).thenCatch(function(e){
+                })
+                .thenCatch(function(e){
                     callback(e);
                 })
         } else {
