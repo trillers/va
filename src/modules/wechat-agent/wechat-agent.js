@@ -106,10 +106,11 @@ proto.withNavigator = function(driver){
  */
 proto.extractCookies = function(){
     var self = this;
-    return self.driver.getCurrentUrl().then(function(url){
-        self.baseUrl = url;
-        setCookiesAndPolling();
-    });
+    return self.driver.getCurrentUrl()
+        .then(function(url){
+            self.baseUrl = url;
+            setCookiesAndPolling();
+        });
     function setCookiesAndPolling(){
         self.driver.manage().getCookies().then(function(cookies){
             cookies.forEach(function(cookie){
@@ -205,9 +206,6 @@ proto.start = function(options, callback){
     function matchUser(currPro, oriPro){
         var expectRate = 50;
         _.objPick(currPro, 'nickname', 'sex');
-        console.warn('check match user');
-        console.log(currPro);
-        console.log(oriPro);
         var actualRate = _.objMatchRate(oriPro, currPro);
         console.warn('[flow]: match rate is ' + actualRate);
         return actualRate >= expectRate
