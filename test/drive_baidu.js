@@ -13,5 +13,11 @@ var driver =  new webdriver.Builder()
 
 driver.call(function(){console.info('start to request baidu')});
 driver.get('https://www.baidu.com');
+var input = driver.findElement({css: '#kw'});
+input.sendKeys('test   test');
+input.getText()
+    .then(function(txt){
+        console.log(txt)
+    });
 driver.getTitle().then(function(title){ console.info('test successful, title is ' + title)});
 driver.quit();

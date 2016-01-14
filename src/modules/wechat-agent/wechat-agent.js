@@ -38,7 +38,6 @@ function WechatAgent(worker){
     this.loggedIn = worker.loggedIn || false;
     this.callCsToLogin = null;
     this.waitForLogin = null;
-    this._disConnectWatcher = null;
     this.baseUrl = "";
     this.j = (function(){
         var jar = request.jar();
@@ -197,7 +196,6 @@ proto.start = function(options, callback){
     }
     function done(callback){
         self.loggedIn = true;
-        self._watchDisconnect();
         self.transition(STATUS.LOGGED);
         self.emit('login', {err: null, data: {botid: self.id}});
         self.extractCookies();
@@ -252,10 +250,6 @@ proto.init = function(bot){
     if(bot.waitForLogin){
         clearInterval(bot.waitForLogin);
         bot.waitForLogin = null;
-    }
-    if(bot._disConnectWatcher){
-        clearInterval(bot._disConnectWatcher);
-        bot._disConnectWatcher = null;
     }
     bot.emit('abort', {err: null, data: {botid: bot.id}});
 };
@@ -354,6 +348,8 @@ proto.contactList = function(callback){
  */
 proto.walkChatList = function(callback){
     var self = this;
+    //ensure connect
+    //self.driver.click();
     self.driver.findElements({'css': 'div[ng-repeat*="chatContact"]'})
         .then(function(collection){
             var len = collection.length;
@@ -463,27 +459,24 @@ proto.startWithCookies = function(callback){
  * polling watch the bot disconnect or not
  * @private
  */
-proto._watchDisconnect = function(){
+proto.watchConnectStat = function(){
     var self = this;
-    self._disConnectWatcher = setInterval(function(){
-        self.driver.call(function(){
-            var spanEl = self.driver.findElement({css: '.nickname span'});
-            self.driver.sleep(200);
-            return spanEl.getText()
-        })
-        .then(function(txt){
-            if(txt == '' && _.arr.in(['logged', 'exceptional'], self.status)){
-                clearInterval(self._disConnectWatcher);
-                return webdriver.promise.rejected(new webdriver.error.Error(myError.DISCONNECT.code, myError.DISCONNECT.msg));
-            }
-        })
-        .thenCatch(function(e){
-            if(e.code === myError.DISCONNECT.code){
-                throw e;
-            }
-            //nothing to do
-        })
-    }, 5000)
+    self.driver.call(function(){
+        var spanEl = self.driver.findElement({css: '.nickname span'});
+        self.driver.sleep(200);
+        return spanEl.getText()
+    })
+    .then(function(txt){
+        if(txt == '' && _.arr.in(['logged', 'exceptional'], self.status)){
+            return webdriver.promise.rejected(new webdriver.error.Error(myError.DISCONNECT.code, myError.DISCONNECT.msg));
+        }
+    })
+    .thenCatch(function(e){
+        if(e.code === myError.DISCONNECT.code){
+            throw e;
+        }
+        //nothing to do
+    })
 };
 
 /**
@@ -585,7 +578,7 @@ function getSnapshot(callback){
     var options = new webdriver.WebDriver.Options(self.driver);
     options.getCookies()
         .then(function(cookies){
-            var o = _.objExclude(self, 'driver', 'callCsToLogin', 'waitForLogin', '_disConnectWatcher')
+            var o = _.objExclude(self, 'driver', 'callCsToLogin', 'waitForLogin')
             _.objPick.apply(null, [o].concat(fields));
             o.j = cookies;
             callback(null, o)

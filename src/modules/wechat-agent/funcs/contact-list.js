@@ -5,9 +5,9 @@ var reset = require('./reset-pointer');
 var request = require('request');
 var closeLocator = webdriver.By.css('div.ngdialog-close');
 var validateIsNormalStrOrNot = require('../../util').validateIsNormalStrOrNot;
+var extractNickname = require('../../util/extractNickname');
 /**
  * contact list info spider
- * @param driver
  * @param callback
  */
 module.exports = function(callback){
@@ -118,25 +118,36 @@ function spiderContactList(self, contactArr){
                             .then(function (nickNameEl) {
                                 if (nickNameEl) {
                                     return nickNameEl.getText();
+                                    //TODO use img to gap text
                                 }
                                 return null;
                             })
                             .then(function (nickname) {
-                                if(nickname || typeof nickname === 'string'){
-                                    if(validateIsNormalStrOrNot(nickname)){
-                                        return null;
-                                    }
-                                    else if(nickname === ""){
-                                        return null;
-                                    }
-                                    else{
-                                        return {
-                                            nickname: nickname,
-                                            username: username
-                                        };
-                                    }
+                                var refinedNickname = extractNickname(nickname);
+                                if(!refinedNickname){
+                                    return null
                                 }
-                                return null;
+                                return {
+                                    nickname: refinedNickname,
+                                    username: username
+                                };
+                                //if(nickname && typeof nickname === 'string'){
+                                //    console.log(nickname);
+                                //    console.warn(validateIsNormalStrOrNot(nickname));
+                                //    if(validateIsNormalStrOrNot(nickname)){
+                                //        return null;
+                                //    }
+                                //    else if(nickname === ""){
+                                //        return null;
+                                //    }
+                                //    else{
+                                //        return {
+                                //            nickname: nickname,
+                                //            username: username
+                                //        };
+                                //    }
+                                //}
+                                //return null;
                             })
                     })
                     .thenCatch(function (e) {

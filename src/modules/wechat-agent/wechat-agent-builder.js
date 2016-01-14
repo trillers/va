@@ -54,6 +54,10 @@ function* startHandler(args){
                 name: 'contactList',
                 type: 'ow'
             },
+            'watch-connectstat': {
+                name: 'watchConnectStat',
+                type: 'ow'
+            },
             //request/reply
             'profile-request': {
                 name: 'readProfile',

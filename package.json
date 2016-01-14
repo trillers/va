@@ -20,7 +20,9 @@
     "request": "2.61.0",
     "underscore": "1.8.3",
     "redis": "0.12.1",
-    "redis-sentinel": "0.3.3"
+    "redis-sentinel": "0.3.3",
+    "jschardet": "*",
+    "iconv": "*"
   },
   "devDependencies": {
     "mocha": "2.1.0",
