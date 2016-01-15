@@ -447,6 +447,18 @@ proto.transition = function(status){
 };
 
 /**
+ * Click the blank place, keep connect
+ * @param callback
+ */
+proto.ensureConnect = function(callback){
+    console.log("[flow]: Begin click noop to ensure connect");
+    var self = this;
+    self.driver.findElement({css: '.panel .header .avatar img'}).click();
+    self.driver.findElement({css: '.display_name'}).click();
+    self.driver.call(callback, null, null);
+};
+
+/**
  * allow agent to login
  * @param callback
  * @returns {*}

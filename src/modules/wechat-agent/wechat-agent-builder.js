@@ -61,6 +61,11 @@ function* startHandler(args){
                 name: 'watchConnectStat',
                 type: 'ow'
             },
+            'ensure-connect': {
+                name: 'ensureConnect',
+                type: 'ow'
+            },
+
             //request/reply
             'profile-request': {
                 name: 'readProfile',
