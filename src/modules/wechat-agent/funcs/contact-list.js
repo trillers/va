@@ -4,8 +4,12 @@ var qs = require('querystring');
 var reset = require('./reset-pointer');
 var request = require('request');
 var closeLocator = webdriver.By.css('div.ngdialog-close');
-var validateIsNormalStrOrNot = require('../../util').validateIsNormalStrOrNot;
 var extractNickname = require('../../util/extractNickname');
+var MYERROR = require('../settings/myerror');
+var settings = require('../../../app/settings');
+var fsServer = settings.fsUrl;
+var codeService = require('../../util/codeService');
+
 /**
  * contact list info spider
  * @param callback
@@ -75,7 +79,7 @@ module.exports = function(callback){
             }
         }).then(function(arr){
             console.log("[flow]: Succeed to get contact list info that length is [" + contactArr.length + "]");
-            console.warn(contactArr)
+            console.warn(contactArr);
             driver.findElement(closeLocator)
                 .then(function(item){
                     return item.click();
@@ -104,10 +108,12 @@ function spiderContactList(self, contactArr){
                 var contact = item;
                 var username = "";
                 var nickname = null;
+                var result = {};
                 return contact.findElement({css: '.avatar img'})
                     .then(function (imgEl) {
                         return imgEl.getAttribute('src')
                             .then(function (src) {
+                                (uploadImg.bind(self))(src, result);
                                 username = qs.parse(urlCore.parse(src).query).username;
                                 if (!username || username.substr(0, 1) != "@" || hasUserName(contactArr, username)) {
                                     return null
@@ -117,8 +123,7 @@ function spiderContactList(self, contactArr){
                             })
                             .then(function (nickNameEl) {
                                 if (nickNameEl) {
-                                    return nickNameEl.getText();
-                                    //TODO use img to gap text
+                                    return nickNameEl.getInnerHtml();
                                 }
                                 return null;
                             })
@@ -127,10 +132,9 @@ function spiderContactList(self, contactArr){
                                 if(!refinedNickname){
                                     return null
                                 }
-                                return {
-                                    nickname: refinedNickname,
-                                    username: username
-                                };
+                                result['nickname'] = refinedNickname;
+                                result['username'] = username;
+                                return result;
                                 //if(nickname && typeof nickname === 'string'){
                                 //    console.log(nickname);
                                 //    console.warn(validateIsNormalStrOrNot(nickname));
@@ -172,4 +176,32 @@ function hasUserName(arr, key) {
         }
     }
     return false;
+}
+
+function uploadImg(src, data){
+    var self = this;
+    var url = 'https://wx.qq.com' + src;
+    var mediaId = codeService.fetch();
+    data.headimgid = mediaId;
+    request.get({url: url, jar: self.j, encoding: null}, function(err, res, body){
+        if(err){
+            console.error(err);
+            var e = new Error(err.message);
+            e.code = MYERROR.FILE_SERVER.code;
+            throw e;
+        }
+        if(body && body.length){
+            console.info("[flow]: Succeed to upload head img, body  length  "+body.length)
+        }
+        var formData = {mediaId: mediaId, file: {value: body, options: {filename: 'xxx.jpg'}}};
+        request.post({url:fsServer, formData: formData}, function(err, res, body) {
+            if(err){
+                console.error(err);
+                var e = new Error(err.message);
+                e.code = MYERROR.FILE_SERVER.code;
+                throw e;
+            }
+            console.info('[flow]: Succeed to upload the headImg');
+        });
+    });
 }

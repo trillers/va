@@ -292,3 +292,4 @@ function readHeadImg(data, callback){
             });
         })
 }
+

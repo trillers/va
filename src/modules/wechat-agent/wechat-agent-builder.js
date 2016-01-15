@@ -28,7 +28,10 @@ process.on('message', function(cmd) {
 });
 //process protector
 process.on('uncaughtException', noop);
-function noop(e){console.error(e)}
+function noop(e){
+    console.error('have not process protector');
+    console.error(e)
+}
 
 //def how to handle event from ipc
 function* startHandler(args){

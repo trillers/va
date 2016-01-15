@@ -44,9 +44,9 @@ driver.manage().getCookies().then(function(cookies){
     });
 });
 driver.findElement({css: '.top'}).click();
-driver.findElement({css: '#editArea'}).sendKeys('A0000海清✅钢铁团队创始人');
-//driver.call(spiderContactListInfo, {driver:driver}, function(err, list){
-//    console.log(list);
-//    console.warn(list.length)
-//});
+//driver.findElement({css: '#editArea'}).sendKeys('A0000海清✅钢铁团队创始人');
+driver.call(spiderContactListInfo, {driver:driver}, function(err, list){
+    console.log(list);
+    console.warn(list.length)
+});
 

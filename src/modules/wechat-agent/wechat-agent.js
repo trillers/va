@@ -20,6 +20,7 @@ var sendText = require('./funcs/send-text');
 var sendImage = require('./funcs/send-image');
 var spiderContactListInfo = require('./funcs/contact-list');
 var reverseProfileAsync = require('./funcs/profile-reverse');
+var readProfileAndRemark = require('./funcs/read-profile-remark');
 var spiderGroupListInfo = require('./funcs/group-list');
 var getHostProfile = require('./funcs/get-host-profile');
 
@@ -298,13 +299,12 @@ proto.groupList = function(callback){
  * @param callback
  */
 proto.contactList = function(callback){
-    var resultList = null;
     var self = this;
     var doneIndex = 0;
     self.micrios = microsFactory();
     self.micrios.scheduleMacros(spiderContactListInfo, self, done);
     function done(err, list){
-        resultList = list;
+        var resultMap = {};
         if(err){
             return callback(err);
         }
@@ -314,9 +314,18 @@ proto.contactList = function(callback){
             }
             for(let i=0,len=list.length; i<len; i++){
                 let contact = list[i];
+                console.warn(resultMap);
+                if(contact.nickname in resultMap){
+                    console.log('a user with duplicated name occur...');
+                    contact.remark = contact.nickname + '_' + (resultMap[contact.nickname] + 1);
+                    console.log(contact.remark);
+                    resultMap[contact.nickname] += 1;
+                }else{
+                    resultMap[contact.nickname] = 0;
+                }
                 //read his profile, and send a remark contact event
                 if(contact.nickname.substr(0, 3) != 'bu-'){
-                    self.micrios.scheduleMacros(readProfile, self, contact.nickname, eachCallback);
+                    self.micrios.scheduleMacros(readProfileAndRemark, self, contact, eachCallback);
                 }
                 //clear the bu- remark, and send a remark contact event
                 else{
@@ -459,7 +468,7 @@ proto.startWithCookies = function(callback){
  * polling watch the bot disconnect or not
  * @private
  */
-proto.watchConnectStat = function(){
+proto.watchConnectStat = function(callback){
     var self = this;
     self.driver.call(function(){
         var spanEl = self.driver.findElement({css: '.nickname span'});
@@ -468,12 +477,13 @@ proto.watchConnectStat = function(){
     })
     .then(function(txt){
         if(txt == '' && _.arr.in(['logged', 'exceptional'], self.status)){
-            return webdriver.promise.rejected(new webdriver.error.Error(myError.DISCONNECT.code, myError.DISCONNECT.msg));
+            return callback(new webdriver.error.Error(myError.DISCONNECT.code, myError.DISCONNECT.msg));
         }
+        callback(null);
     })
     .thenCatch(function(e){
         if(e.code === myError.DISCONNECT.code){
-            throw e;
+            callback(e);
         }
         //nothing to do
     })
