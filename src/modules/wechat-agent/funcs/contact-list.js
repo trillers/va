@@ -180,7 +180,9 @@ function hasUserName(arr, key) {
 
 function uploadImg(src, data){
     var self = this;
-    var url = 'https://wx.qq.com' + src;
+    console.warn("***************")
+    console.warn(src);
+    var url = 'https://wx.qq.com/' + src;
     var mediaId = codeService.fetch();
     data.headimgid = mediaId;
     request.get({url: url, jar: self.j, encoding: null}, function(err, res, body){
